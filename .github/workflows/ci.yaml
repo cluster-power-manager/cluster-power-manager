@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - LICENSE
+      - OWNERS
+      - OWNERS_ALIASES
+      - .gitignore
+      - docs/**
+      - hack/**
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - LICENSE
+      - OWNERS
+      - OWNERS_ALIASES
+      - .gitignore
+      - docs/**
+      - hack/**
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version-file: go.mod
+      - name: Generate, build CRDs, and run unit and integration tests
+        run: make test
+
+  images:
+    name: Images
+    needs: [test]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    timeout-minutes: 20
+    env:
+      REGISTRY: ghcr.io
+      OPERATOR_IMAGE: ghcr.io/cluster-power-manager/cluster-power-manager-operator
+      AGENT_IMAGE: ghcr.io/cluster-power-manager/cluster-power-node-agent
+      IMAGE_TAG: latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+      - name: Log in to ghcr.io
+        if: github.event_name == 'push'
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: ${{ github.event_name == 'push' && 'Build and push operator image' || 'Build operator image' }}
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+        with:
+          context: .
+          file: build/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name == 'push' }}
+          tags: |
+            ${{ env.OPERATOR_IMAGE }}:${{ env.IMAGE_TAG }}
+            ${{ env.OPERATOR_IMAGE }}:${{ github.sha }}
+      - name: ${{ github.event_name == 'push' && 'Build and push agent image' || 'Build agent image' }}
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+        with:
+          context: .
+          file: build/Dockerfile.nodeagent
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name == 'push' }}
+          tags: |
+            ${{ env.AGENT_IMAGE }}:${{ env.IMAGE_TAG }}
+            ${{ env.AGENT_IMAGE }}:${{ github.sha }}
