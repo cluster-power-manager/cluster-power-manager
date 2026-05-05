@@ -46,7 +46,7 @@ type powerNodeConfigValidator struct {
 func SetupPowerNodeConfigWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&PowerNodeConfig{}).
-		WithValidator(&powerNodeConfigValidator{Client: mgr.GetClient(), Namespace: GetKPMNamespace()}).
+		WithValidator(&powerNodeConfigValidator{Client: mgr.GetClient(), Namespace: GetCPMNamespace()}).
 		Complete()
 }
 

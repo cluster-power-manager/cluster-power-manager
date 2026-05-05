@@ -196,7 +196,7 @@ C6      Deep Power Down
 #### P-state
 
   The P-state governor feature allows the user to check if the P-state driver is enabled on the system. If the P-state
-  driver is enabled while using the Kubernetes Power Manager, users may select a P-state governor per core, which are
+  driver is enabled while using the Cluster Power Manager, users may select a P-state governor per core, which are
   described as "performance" and "powersave" governors in the Power Profiles.
 
 * Performance governor - The CPUfreq governor "performance" sets the CPU statically to the highest frequency within the

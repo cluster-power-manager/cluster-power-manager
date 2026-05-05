@@ -1,11 +1,11 @@
 ---
 # See the OWNERS docs at https://go.k8s.io/owners
 
-component: "KPM"
+component: "CPM"
 filters:
   ".*":
     approvers:
-      - kpm-approvers
+      - cpm-approvers
     reviewers:
-      - kpm-reviewers
-subcomponent: "Kubernetes Power Manager"
+      - cpm-reviewers
+subcomponent: "Cluster Power Manager"

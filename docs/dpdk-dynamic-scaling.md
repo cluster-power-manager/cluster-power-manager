@@ -2,9 +2,9 @@
 
 ## Overview
 
-- This feature dynamically adjusts CPU frequency for DPDK polling applications based on the DPDK usage metric. The Kubernetes Power Manager (KPM) samples per‑CPU
+- This feature dynamically adjusts CPU frequency for DPDK polling applications based on the DPDK usage metric. The Cluster Power Manager (CPM) samples per‑CPU
 usage exposed by the DPDK telemetry socket, computes a windowed utilization for each CPU, and steers the CPU frequency to keep that utilization near a target band.
-- Actuation is done through the Linux cpufreq subsystem using the `userspace` governor, which allows KPM to set explicit target frequencies.
+- Actuation is done through the Linux cpufreq subsystem using the `userspace` governor, which allows CPM to set explicit target frequencies.
 
 ## How it works
 
@@ -91,7 +91,7 @@ Then apply filters and limits:
     - If Hyper-Threading is enabled, pass `--non-siblings` to pin the server to one logical CPU per physical core. If HT is disabled, omit the flag.
     - To launch multiple DPDK pods, pass `--replicas N` (default: 1). Each pod gets its own DPDK telemetry connection and CPU scaling.
 
-3. Monitor frequency and usage on the node with [kpmon.py](../testbin/kpmon.py). Copy the script to the target node and run it there, as it reads CPU sysfs and MSR data locally:
+3. Monitor frequency and usage on the node with [cpmon.py](../testbin/cpmon.py). Copy the script to the target node and run it there, as it reads CPU sysfs and MSR data locally:
 
     ```sh
     # On the target node:
@@ -100,7 +100,7 @@ Then apply filters and limits:
     POD="<pod-name>"
     CPUS=$(oc get powernodestate "$NODE-power-state" -n power-manager -o jsonpath="{range .status.cpuPools.exclusive[?(@.pod==\"$POD\")]}{range .powerContainers[?(@.name==\"server\")]}{.cpuIDs}{end}{end}" | tr -d '[]')
     PODID=$(oc get powernodestate "$NODE-power-state" -n power-manager -o jsonpath="{range .status.cpuPools.exclusive[?(@.pod==\"$POD\")]}{.podUID}{end}")
-    ./kpmon.py --cpu "$CPUS" --dpdk-pod-uid "$PODID" [--no-siblings] [--scroll]
+    ./cpmon.py --cpu "$CPUS" --dpdk-pod-uid "$PODID" [--no-siblings] [--scroll]
     ```
 
 4. To tear down the DPDK test app:

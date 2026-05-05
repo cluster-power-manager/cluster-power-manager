@@ -1,4 +1,4 @@
-# Kubernetes Power Manager
+# Cluster Power Manager
 
 This is an experimental project based on https://github.com/intel/kubernetes-power-manager (which has been
 discontinued). It also includes enhancements from https://github.com/AMDEPYC/kubernetes-power-manager
@@ -6,7 +6,7 @@ discontinued). It also includes enhancements from https://github.com/AMDEPYC/kub
 
 ## Introduction
 
-The Kubernetes Power Manager is a Kubernetes Operator that has been developed to provide cluster users with a
+The Cluster Power Manager is a Kubernetes Operator that has been developed to provide cluster users with a
 Kubernetes native mechanism to configure power management settings (e.g. c-states, p-states, uncore) through CRDs.
 The main features include the ability to:
 - Configure per-CPU power management (p-states, c-states) for reserved CPUs, shared CPUs and application workload
@@ -15,17 +15,17 @@ The main features include the ability to:
 - Configure processor level power management (e.g. uncore frequency for Intel processors).
 - Modify p-states for guaranteed pod CPUs running DPDK applications based on DPDK metrics.
 
-The Kubernetes Power Manager supports Intel, AMD and ARM processor architectures. Modern processors give users more
+The Cluster Power Manager supports Intel, AMD and ARM processor architectures. Modern processors give users more
 precise control over CPU performance and power use on a per-core basis. Yet, Kubernetes is purposefully built to
 operate as an abstraction layer between the workload and such hardware capabilities as a workload orchestrator. Users
 of Kubernetes who are running performance-critical workloads with particular requirements reliant on hardware
 capabilities encounter a challenge as a consequence.
 
-The Kubernetes Power Manager bridges the gap between the container orchestration layer and hardware features enablement.
+The Cluster Power Manager bridges the gap between the container orchestration layer and hardware features enablement.
 
-### Kubernetes Power Manager main responsibilities
+### Cluster Power Manager main responsibilities
 
-- The Kubernetes Power Manager consists of two main components:
+- The Cluster Power Manager consists of two main components:
   - the overarching manager which is deployed anywhere on a cluster
   - the power node agent which is deployed on each node you require power management capabilities.
 - The overarching operator is responsible for the configuration and deployment of the power node agent, while the power
@@ -44,11 +44,11 @@ The Kubernetes Power Manager bridges the gap between the container orchestration
 - *Mixed use.* A user may have a combination of applications - some of which demand the highest performance and
   response time, and some that are more concerned with power optimization.
 
-The Kubernetes Power Manager supports all of the above use cases.
+The Cluster Power Manager supports all of the above use cases.
 
 > Further Info:  Please see the *diagrams-docs* directory for diagrams with a visual breakdown of the power manager and its components.
 
-## Functionality of the Kubernetes Power Manager
+## Functionality of the Cluster Power Manager
 
 - **Frequency Tuning**
 
@@ -63,7 +63,7 @@ The Kubernetes Power Manager supports all of the above use cases.
 
   - **Scaling Drivers**
 
-    The following scaling drivers are currently supported in KPM:
+    The following scaling drivers are currently supported in CPM:
 
     - **intel_pstate**
   
@@ -117,7 +117,7 @@ The Kubernetes Power Manager supports all of the above use cases.
 
   To save energy on a system, you can allow the CPU to go into a low-power mode. Each CPU has several power modes, which are collectively called C-States. These work by cutting the clock signal and power from idle CPUs, or CPUs that are not executing commands. More details in the [kernel CPU Idle section](https://docs.kernel.org/driver-api/pm/cpuidle.html).
   
-  KPM supports both explicit C-state configuration by name and latency-based C-states configuration, allowing for a more fine-grained control over the trade-off between power saving and latency. C-states can now be configured directly within PowerProfiles alongside P-state settings.
+  CPM supports both explicit C-state configuration by name and latency-based C-states configuration, allowing for a more fine-grained control over the trade-off between power saving and latency. C-states can now be configured directly within PowerProfiles alongside P-state settings.
 
   - The C-States configuration in Linux is stored in `/sys/devices/system/cpu/cpuN/cpuidle` or `/sys/devices/system/cpu/cpuidle`. To determine the driver in use, simply check the `/sys/devices/system/cpu/cpuidle/current_driver` file.
   - Before configuring C-states in a PowerProfile, the user must confirm which C-states are actually available on the system. The available C-States are found under `/sys/devices/system/cpu/cpuN/cpuidle/stateN/`.
@@ -149,20 +149,20 @@ The Kubernetes Power Manager supports all of the above use cases.
     > sudo modprobe amd_hsmp
     > ```
 
-    In ADM KPM, the following logic applies when configuring DF P-states:
+    In AMD CPM, the following logic applies when configuring DF P-states:
     - When min equals max, a fixed DF P-state is set. This disables automatic DF p-state scaling and locks the DF to operate at that specific performance level.
     - When min differs max, DF is allowed to dynamically scale between the specified DF P-states range.
 
-    This is not currently supported in KPM.
+    This is not currently supported in CPM.
 
   - **ARM** - no equivalent supported
 
 ## Prerequisites
 
 - **Node Feature Discovery** ([NFD](https://github.com/kubernetes-sigs/node-feature-discovery)) should be deployed in
-  the cluster before running the Kubernetes Power Manager.
+  the cluster before running the Cluster Power Manager.
   NFD is used to detect node-level features such as *Intel Speed Select Technology - Base Frequency (SST-BF)*.
-  Once detected, the user can instruct the Kubernetes Power Manager to deploy the Power Node Agent to Nodes with
+  Once detected, the user can instruct the Cluster Power Manager to deploy the Power Node Agent to Nodes with
   SST-specific labels, allowing the Power Node Agent to take advantage of such features by configuring cores on the
   host to optimise performance for containerized workloads.
   
@@ -260,7 +260,7 @@ make build-push-images-ocp
 
 ### Building Multi-Architecture Images
 
-The Kubernetes Power Manager supports building multi-architecture container images for both the Power Operator and Power Node Agent. This allows you to create a single image tag that works across multiple architectures (e.g., AMD64 and ARM64).
+The Cluster Power Manager supports building multi-architecture container images for both the Power Operator and Power Node Agent. This allows you to create a single image tag that works across multiple architectures (e.g., AMD64 and ARM64).
 
 #### Prerequisites
 
@@ -368,7 +368,7 @@ make install deploy
 
 ## Deploying the Kubernetes Power Manager using Helm
 
-The Kubernetes Power Manager includes a helm chart for the latest releases, allowing the user to easily deploy
+The Cluster Power Manager includes a helm chart for the latest releases, allowing the user to easily deploy
 everything that is needed for the overarching operator and the node agent to run. The following versions are
 supported with helm charts:
 
@@ -384,7 +384,7 @@ When set up using the provided helm charts, the following will be deployed:
 
 To change any of the values the above are deployed with, edit the values.yaml file of the relevant helm chart.
 
-To deploy the Kubernetes Power Manager using Helm, you must have Helm installed. For more information on installing
+To deploy the Cluster Power Manager using Helm, you must have Helm installed. For more information on installing
 Helm, see the installation guide [here](https://helm.sh/docs/intro/install/).
 
 To install the latest version, use the following command:
@@ -395,7 +395,7 @@ To uninstall the latest version, use the following command:
 
 `make helm-uninstall`
 
-You can use the HELM_CHART and OCP parameters to deploy an older or Openshift specific version of the Kubernetes Power Manager:
+You can use the HELM_CHART and OCP parameters to deploy an older or Openshift specific version of the Cluster Power Manager:
 
 `HELM_CHART=v2.3.1 OCP=true make helm-install`
 `HELM_CHART=v2.2.0 make helm-install`
@@ -413,7 +413,7 @@ Library will also facilitate the use of C-States functionality.
 
 ### Power Node Agent
 
-The Power Node Agent is also a containerized application deployed by the Kubernetes Power Manager in a DaemonSet.
+The Power Node Agent is also a containerized application deployed by the Cluster Power Manager in a DaemonSet.
 
 The primary function of the node agent is to communicate with the node's Kubelet PodResources endpoint to discover the
 exact cores that are allocated per container. The node agent watches for Pods that are created in your cluster and examines
@@ -422,7 +422,7 @@ frequencies of the cores designated to the Pod.
 
 ### Power Config controller
 
-The Kubernetes Power Manager will wait for the `PowerConfig` CR to be created by the user to initiate the deployment of
+The Cluster Power Manager will wait for the `PowerConfig` CR to be created by the user to initiate the deployment of
 the node agent. The `PowerConfig` specifies what Nodes the user wants to place the node agent on.
 
 > `spec.powerNodeSelector`: This is a key/value map used for defining a list of node labels that a node must satisfy in order for the Power Node Agent to be deployed.
@@ -491,7 +491,7 @@ spec:
 ### Power Profile Controller
 
 The Power Profile controller holds values for specific settings which are then applied to cores at host level by the
-Kubernetes Power Manager as requested. `PowerProfiles` are advertised as extended resources and can be requested via the
+Cluster Power Manager as requested. `PowerProfiles` are advertised as extended resources and can be requested via the
 PodSpec. All `PowerProfiles` must be created explicitly by the user.
 
 **Example:**
@@ -651,7 +651,7 @@ determine which PowerProfile has been requested, moves the pod's CPUs into the c
 Optimization Library, and updates the `PowerNodeState` status.
 
 > **Note**: the request and the limits must have a matching number of cores and are also on a container-by-container basis.
-Currently the Kubernetes Power Manager supports multiple `PowerProfile` per Pod, but only one `PowerProfile` per container.
+Currently the Cluster Power Manager supports multiple `PowerProfile` per Pod, but only one `PowerProfile` per container.
 
 ### Uncore Frequency - only applicable to Intel CPUs
 
@@ -682,7 +682,7 @@ status:
 
 ## End to end workflow
 
-1. Build and install KPM with either [Helm](#deploying-the-kubernetes-power-manager-using-helm) or [Kustomize](#deploying-the-kubernetes-power-manager-using-kustomize).
+1. Build and install CPM with either [Helm](#deploying-the-cluster-power-manager-using-helm) or [Kustomize](#deploying-the-cluster-power-manager-using-kustomize).
 
 2. Label the nodes in accordance to the `spec.powerNodeSelector` field of the `PowerConfig` that will be applied.
 

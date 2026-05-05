@@ -2,12 +2,12 @@
 # See the OWNERS docs at https://go.k8s.io/owners
 
 aliases:
-  kpm-approvers:
+  cpm-approvers:
     - bartwensley
     - browsell
     - irinamihai
     - Missxiaoguo
-  kpm-reviewers:
+  cpm-reviewers:
     - bartwensley
     - browsell
     - irinamihai

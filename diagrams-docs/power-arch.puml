@@ -27,7 +27,7 @@ agent {
 actor Developer
 actor Georgina
 
-title <b>Kubernetes Power Manager Architectural Diagram
+title <b>Cluster Power Manager Architectural Diagram
 skinparam roundCorner 15
 rectangle "<b>Kubernetes Cluster" {
 

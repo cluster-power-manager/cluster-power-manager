@@ -553,7 +553,7 @@ def main(stdscr, args):
         time.sleep(refresh_interval_sec)
 
 if __name__=="__main__":
-    parser = argparse.ArgumentParser(description="Kubernetes Power Manager CPU monitor")
+    parser = argparse.ArgumentParser(description="Cluster Power Manager CPU monitor")
     parser.add_argument("--print-interval", "-pi", type=float, default=1.0, help="refresh interval in seconds")
     parser.add_argument("--sample-interval", "-si", type=float, default=0.01, help="sampling interval for DPDK usage (seconds)")
     parser.add_argument("--cpu", "-c", type=str, default="0", help="List of cpus to watch")

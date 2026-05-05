@@ -25,7 +25,7 @@ agent {
 
 
 
-title <b>Kubernetes Power Manager components Diagram
+title <b>Cluster Power Manager components Diagram
 skinparam roundCorner 15
 node "Power Node Agent" {
 
