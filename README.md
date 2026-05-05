@@ -366,7 +366,7 @@ IMG_AGENT=quay.io/<user/org>/power-node-agent:<tag> \
 make install deploy
 ```
 
-## Deploying the Kubernetes Power Manager using Helm
+## Deploying the Cluster Power Manager using Helm
 
 The Cluster Power Manager includes a helm chart for the latest releases, allowing the user to easily deploy
 everything that is needed for the overarching operator and the node agent to run. The following versions are

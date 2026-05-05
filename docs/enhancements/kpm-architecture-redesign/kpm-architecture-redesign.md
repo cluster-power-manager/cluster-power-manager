@@ -1,5 +1,5 @@
 ---
-title: CPM Architecture Redesign for Multi-Node Support
+title: KPM Architecture Redesign for Multi-Node Support
 authors:
   - "@Missxiaoguo"
 reviewers:
@@ -12,11 +12,11 @@ creation-date: 2026-02-24
 last-updated: YYYY-MM-DD
 ---
 
-# CPM Architecture Redesign for Multi-Node Support
+# KPM Architecture Redesign for Multi-Node Support
 
 ## Summary
 
-Redesign the Cluster Power Manager (CPM) Custom Resource (CR) and controller architecture to properly support multi-node clusters.
+Redesign the Kubernetes Power Manager (KPM) Custom Resource (CR) and controller architecture to properly support multi-node clusters.
 This enhancement proposes:
 
 - Introducing a new `PowerNodeConfig` CR for shared/reserved CPU configuration
@@ -55,7 +55,7 @@ This is operationally burdensome and does not scale automatically with GitOps wo
 
 ## Current Architecture
 
-![CPM Current Architecture](kpm-current-state.png)
+![KPM Current Architecture](kpm-current-state.png)
 
 ### Custom Resources
 
@@ -95,7 +95,7 @@ This is operationally burdensome and does not scale automatically with GitOps wo
 
 ### Proposed Architecture
 
-![CPM Proposed Architecture](kpm-proposal.png)
+![KPM Proposed Architecture](kpm-proposal.png)
 
 *Note: The fields shown in the diagram are illustrative. The exact field structure and naming in PowerNodeConfig and PowerNodeState may be finalized during implementation.*
 

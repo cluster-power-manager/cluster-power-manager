@@ -149,5 +149,5 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat
-    url: https://github.com/openshift-kni/cluster-power-manager
+    url: https://github.com/cluster-power-manager/cluster-power-manager
   version: 0.0.1
