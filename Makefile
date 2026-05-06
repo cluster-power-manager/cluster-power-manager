@@ -1,5 +1,5 @@
-export PROJECT_NAME=kubernetes-power-manager
-KPM_NAMESPACE ?= power-manager
+export PROJECT_NAME=cluster-power-manager
+CPM_NAMESPACE ?= power-manager
 # Current Operator version
 VERSION ?= 0.0.1
 # Bundle version (without 'v' prefix for operator-sdk)
@@ -29,7 +29,8 @@ OCP ?= false
 
 IMAGE_REGISTRY ?= quay.io/openshift-kni
 
-IMAGE_NAME ?= $(PROJECT_NAME)-operator
+# TODO: rename to $(PROJECT_NAME)-operator and $(PROJECT_NAME)-node-agent once the release strategy is decided
+IMAGE_NAME ?= kubernetes-power-manager-operator
 IMAGE_NAME_AGENT ?= kubernetes-power-node-agent
 IMAGE_TAG_BASE ?= $(IMAGE_REGISTRY)/$(IMAGE_NAME)
 IMAGE_TAG_BASE_AGENT ?= $(IMAGE_REGISTRY)/$(IMAGE_NAME_AGENT)
@@ -206,21 +207,21 @@ ifeq (true, $(OCP))
 	$(eval HELM_FLAG:=--set ocp=true)
 	$(eval OCP_SUFFIX:=_ocp-$(OCP_VERSION))
 endif
-	sed -i 's/^version:.*$$/version: $(HELM_VERSION)/' helm/kubernetes-power-manager/Chart.yaml 
-	sed -i 's/^appVersion:.*$$/appVersion: \"$(HELM_CHART)\"/' helm/kubernetes-power-manager/Chart.yaml
+	sed -i 's/^version:.*$$/version: $(HELM_VERSION)/' helm/cluster-power-manager/Chart.yaml 
+	sed -i 's/^appVersion:.*$$/appVersion: \"$(HELM_CHART)\"/' helm/cluster-power-manager/Chart.yaml
 	sed -i 's/^version:.*$$/version: $(HELM_VERSION)/' helm/crds/Chart.yaml 
 	sed -i 's/^appVersion:.*$$/appVersion: \"$(HELM_CHART)\"/' helm/crds/Chart.yaml 
-	helm install kubernetes-power-manager-crds ./helm/crds
-	helm dependency update ./helm/kubernetes-power-manager
-	helm install kubernetes-power-manager-$(HELM_CHART) ./helm/kubernetes-power-manager --set operator.container.image=$(IMAGE_REGISTRY)/kubernetes-power-manager-operator:$(VERSION) $(HELM_FLAG)
+	helm install cluster-power-manager-crds ./helm/crds
+	helm dependency update ./helm/cluster-power-manager
+	helm install cluster-power-manager-$(HELM_CHART) ./helm/cluster-power-manager --set operator.container.image=$(IMAGE_REGISTRY)/kubernetes-power-manager-operator:$(VERSION) $(HELM_FLAG)
 
 helm-uninstall:
-	sed -i 's/^version:.*$$/version: $(HELM_VERSION)/' helm/kubernetes-power-manager/Chart.yaml 
-	sed -i 's/^appVersion:.*$$/appVersion: \"$(HELM_CHART)\"/' helm/kubernetes-power-manager/Chart.yaml 
+	sed -i 's/^version:.*$$/version: $(HELM_VERSION)/' helm/cluster-power-manager/Chart.yaml 
+	sed -i 's/^appVersion:.*$$/appVersion: \"$(HELM_CHART)\"/' helm/cluster-power-manager/Chart.yaml 
 	sed -i 's/^version:.*$$/version: $(HELM_VERSION)/' helm/crds/Chart.yaml 
 	sed -i 's/^appVersion:.*$$/appVersion: \"$(HELM_CHART)\"/' helm/crds/Chart.yaml 
-	helm uninstall kubernetes-power-manager-$(HELM_CHART)
-	helm uninstall kubernetes-power-manager-crds
+	helm uninstall cluster-power-manager-$(HELM_CHART)
+	helm uninstall cluster-power-manager-crds
 
 .PHONY: install uninstall deploy manifests fmt vet tls
 # Install CRDs into a cluster
@@ -387,13 +388,13 @@ bundle-push:
 
 .PHONY: bundle-run
 bundle-run: # Install bundle on cluster using operator sdk.
-	oc create ns $(KPM_NAMESPACE)
-	$(OPERATOR_SDK) --security-context-config restricted -n $(KPM_NAMESPACE) run bundle $(BUNDLE_IMG)
+	oc create ns $(CPM_NAMESPACE)
+	$(OPERATOR_SDK) --security-context-config restricted -n $(CPM_NAMESPACE) run bundle $(BUNDLE_IMG)
 
 .PHONY: bundle-clean
 bundle-clean: # Uninstall bundle on cluster using operator sdk.
-	$(OPERATOR_SDK) cleanup $(PROJECT_NAME) -n $(KPM_NAMESPACE)
-	oc delete ns $(KPM_NAMESPACE)
+	$(OPERATOR_SDK) cleanup $(PROJECT_NAME) -n $(CPM_NAMESPACE)
+	oc delete ns $(CPM_NAMESPACE)
 
 .PHONY: operator-sdk
 operator-sdk: $(OPERATOR_SDK) ## Download operator-sdk locally if necessary.

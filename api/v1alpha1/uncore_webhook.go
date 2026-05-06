@@ -45,7 +45,7 @@ type uncoreValidator struct {
 func SetupUncoreWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&Uncore{}).
-		WithValidator(&uncoreValidator{Client: mgr.GetClient(), Namespace: GetKPMNamespace()}).
+		WithValidator(&uncoreValidator{Client: mgr.GetClient(), Namespace: GetCPMNamespace()}).
 		Complete()
 }
 

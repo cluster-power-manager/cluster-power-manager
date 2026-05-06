@@ -28,15 +28,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const defaultKPMNamespace = "power-manager"
+const defaultCPMNamespace = "power-manager"
 
-// GetKPMNamespace returns the operator namespace from the KPM_NAMESPACE env var,
+// GetCPMNamespace returns the operator namespace from the CPM_NAMESPACE env var,
 // defaulting to "power-manager" if unset.
-func GetKPMNamespace() string {
-	if ns := os.Getenv("KPM_NAMESPACE"); ns != "" {
+func GetCPMNamespace() string {
+	if ns := os.Getenv("CPM_NAMESPACE"); ns != "" {
 		return ns
 	}
-	return defaultKPMNamespace
+	return defaultCPMNamespace
 }
 
 // validateNamespace rejects the request if the resource is not in the operator namespace.

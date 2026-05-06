@@ -4,7 +4,7 @@ layout:
 plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
-projectName: kubernetes-power-manager
+projectName: cluster-power-manager
 repo: github.com/cluster-power-manager/cluster-power-manager
 resources:
 - domain: cluster-power-manager.github.io

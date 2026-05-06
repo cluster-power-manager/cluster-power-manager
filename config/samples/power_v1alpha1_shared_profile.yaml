@@ -4,9 +4,9 @@ metadata:
   labels:
     app.kubernetes.io/name: PowerProfile
     app.kubernetes.io/instance: shared
-    app.kubernetes.io/part-of: kubernetes-power-manager
+    app.kubernetes.io/part-of: cluster-power-manager
     app.kubernetes.io/managed-by: kustomize
-    app.kubernetes.io/created-by: kubernetes-power-manager
+    app.kubernetes.io/created-by: cluster-power-manager
   name: shared
   namespace: power-manager
 spec:

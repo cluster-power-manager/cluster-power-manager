@@ -57,7 +57,7 @@ func SetupPowerProfileWebhookWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&PowerProfile{}).
-		WithValidator(&powerProfileValidator{Client: mgr.GetClient(), Namespace: GetKPMNamespace()}).
+		WithValidator(&powerProfileValidator{Client: mgr.GetClient(), Namespace: GetCPMNamespace()}).
 		Complete()
 }
 

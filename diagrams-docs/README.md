@@ -1,4 +1,4 @@
-# Kubernetes Power Manager Architectural and Sequence Diagrams
+# Cluster Power Manager Architectural and Sequence Diagrams
 
 An up-to-date architectural and sequence diagram will be available here.  
 With each update or release an updated diagram will be available with the version number attached.

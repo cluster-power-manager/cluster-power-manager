@@ -6,8 +6,8 @@ metadata:
     app.kubernetes.io/name: clusterrole
     app.kubernetes.io/instance: uncore-viewer-role
     app.kubernetes.io/component: rbac
-    app.kubernetes.io/created-by: kubernetes-power-manager
-    app.kubernetes.io/part-of: kubernetes-power-manager
+    app.kubernetes.io/created-by: cluster-power-manager
+    app.kubernetes.io/part-of: cluster-power-manager
     app.kubernetes.io/managed-by: kustomize
   name: uncore-viewer-role
 rules:

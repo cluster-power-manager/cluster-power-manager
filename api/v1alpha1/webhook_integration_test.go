@@ -116,7 +116,7 @@ func TestMain(m *testing.M) {
 	envtestClient = mgr.GetClient()
 
 	// Create test namespace before probing webhooks.
-	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: defaultKPMNamespace}}
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: defaultCPMNamespace}}
 	if err := envtestClient.Create(ctx, ns); err != nil && !apierrors.IsAlreadyExists(err) {
 		fmt.Fprintf(os.Stderr, "failed to create test namespace: %v\n", err)
 		exit(1)
@@ -127,7 +127,7 @@ func TestMain(m *testing.M) {
 	ready := false
 	for i := 0; i < 100; i++ {
 		probe := &Uncore{
-			ObjectMeta: metav1.ObjectMeta{Name: "webhook-readiness-probe", Namespace: defaultKPMNamespace},
+			ObjectMeta: metav1.ObjectMeta{Name: "webhook-readiness-probe", Namespace: defaultCPMNamespace},
 			Spec:       UncoreSpec{SysMin: uintPtr(2), SysMax: uintPtr(1)},
 		}
 		if err := envtestClient.Create(ctx, probe); apierrors.IsInvalid(err) {
@@ -157,15 +157,15 @@ func TestEnvTestWebhook_PowerNodeConfig(t *testing.T) {
 
 	// --- Setup: create profiles and a node used across subtests ---
 	sharedProf := &PowerProfile{
-		ObjectMeta: metav1.ObjectMeta{Name: "shared-prof", Namespace: defaultKPMNamespace},
+		ObjectMeta: metav1.ObjectMeta{Name: "shared-prof", Namespace: defaultCPMNamespace},
 		Spec:       PowerProfileSpec{Shared: true},
 	}
 	perfProf := &PowerProfile{
-		ObjectMeta: metav1.ObjectMeta{Name: "perf-prof", Namespace: defaultKPMNamespace},
+		ObjectMeta: metav1.ObjectMeta{Name: "perf-prof", Namespace: defaultCPMNamespace},
 		Spec:       PowerProfileSpec{Shared: false},
 	}
 	resvProf := &PowerProfile{
-		ObjectMeta: metav1.ObjectMeta{Name: "res-prof", Namespace: defaultKPMNamespace},
+		ObjectMeta: metav1.ObjectMeta{Name: "res-prof", Namespace: defaultCPMNamespace},
 		Spec:       PowerProfileSpec{},
 	}
 	node := &corev1.Node{
@@ -185,7 +185,7 @@ func TestEnvTestWebhook_PowerNodeConfig(t *testing.T) {
 
 	t.Run("create/reject missing profile", func(t *testing.T) {
 		config := &PowerNodeConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: "pnc-bad-missing", Namespace: defaultKPMNamespace},
+			ObjectMeta: metav1.ObjectMeta{Name: "pnc-bad-missing", Namespace: defaultCPMNamespace},
 			Spec:       PowerNodeConfigSpec{SharedPowerProfile: "nonexistent"},
 		}
 		err := envtestClient.Create(ctx, config)
@@ -196,7 +196,7 @@ func TestEnvTestWebhook_PowerNodeConfig(t *testing.T) {
 
 	t.Run("create/reject not-shared profile", func(t *testing.T) {
 		config := &PowerNodeConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: "pnc-bad-notshared", Namespace: defaultKPMNamespace},
+			ObjectMeta: metav1.ObjectMeta{Name: "pnc-bad-notshared", Namespace: defaultCPMNamespace},
 			Spec:       PowerNodeConfigSpec{SharedPowerProfile: "perf-prof"},
 		}
 		err := envtestClient.Create(ctx, config)
@@ -207,7 +207,7 @@ func TestEnvTestWebhook_PowerNodeConfig(t *testing.T) {
 
 	t.Run("create/reject overlapping CPUs", func(t *testing.T) {
 		config := &PowerNodeConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: "pnc-bad-overlap", Namespace: defaultKPMNamespace},
+			ObjectMeta: metav1.ObjectMeta{Name: "pnc-bad-overlap", Namespace: defaultCPMNamespace},
 			Spec: PowerNodeConfigSpec{
 				SharedPowerProfile: "shared-prof",
 				ReservedCPUs: []ReservedSpec{
@@ -225,7 +225,7 @@ func TestEnvTestWebhook_PowerNodeConfig(t *testing.T) {
 	// --- Create a valid PowerNodeConfig ---
 
 	config := &PowerNodeConfig{
-		ObjectMeta: metav1.ObjectMeta{Name: "pnc-valid", Namespace: defaultKPMNamespace},
+		ObjectMeta: metav1.ObjectMeta{Name: "pnc-valid", Namespace: defaultCPMNamespace},
 		Spec: PowerNodeConfigSpec{
 			SharedPowerProfile: "shared-prof",
 			NodeSelector: NodeSelector{
@@ -243,7 +243,7 @@ func TestEnvTestWebhook_PowerNodeConfig(t *testing.T) {
 
 	t.Run("create/reject nodeSelector conflict", func(t *testing.T) {
 		conflicting := &PowerNodeConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: "pnc-bad-conflict", Namespace: defaultKPMNamespace},
+			ObjectMeta: metav1.ObjectMeta{Name: "pnc-bad-conflict", Namespace: defaultCPMNamespace},
 			Spec: PowerNodeConfigSpec{
 				SharedPowerProfile: "shared-prof",
 				NodeSelector: NodeSelector{
@@ -301,7 +301,7 @@ func TestEnvTestWebhook_Uncore(t *testing.T) {
 
 	t.Run("create/reject sysMin > sysMax", func(t *testing.T) {
 		uncore := &Uncore{
-			ObjectMeta: metav1.ObjectMeta{Name: "uc-bad-minmax", Namespace: defaultKPMNamespace},
+			ObjectMeta: metav1.ObjectMeta{Name: "uc-bad-minmax", Namespace: defaultCPMNamespace},
 			Spec:       UncoreSpec{SysMin: uintPtr(2400), SysMax: uintPtr(800)},
 		}
 		err := envtestClient.Create(ctx, uncore)
@@ -312,7 +312,7 @@ func TestEnvTestWebhook_Uncore(t *testing.T) {
 
 	t.Run("create/reject duplicate dieSelector", func(t *testing.T) {
 		uncore := &Uncore{
-			ObjectMeta: metav1.ObjectMeta{Name: "uc-bad-dupdie", Namespace: defaultKPMNamespace},
+			ObjectMeta: metav1.ObjectMeta{Name: "uc-bad-dupdie", Namespace: defaultCPMNamespace},
 			Spec: UncoreSpec{
 				DieSelectors: &[]DieSelector{
 					{Package: uintPtr(0), Die: uintPtr(0), Min: uintPtr(800), Max: uintPtr(2400)},
@@ -329,7 +329,7 @@ func TestEnvTestWebhook_Uncore(t *testing.T) {
 	// --- Create a valid Uncore ---
 
 	uncore := &Uncore{
-		ObjectMeta: metav1.ObjectMeta{Name: "uc-valid", Namespace: defaultKPMNamespace},
+		ObjectMeta: metav1.ObjectMeta{Name: "uc-valid", Namespace: defaultCPMNamespace},
 		Spec: UncoreSpec{
 			SysMin: uintPtr(800),
 			SysMax: uintPtr(2400),
@@ -349,7 +349,7 @@ func TestEnvTestWebhook_Uncore(t *testing.T) {
 
 	t.Run("create/reject nodeSelector conflict", func(t *testing.T) {
 		conflicting := &Uncore{
-			ObjectMeta: metav1.ObjectMeta{Name: "uc-bad-conflict", Namespace: defaultKPMNamespace},
+			ObjectMeta: metav1.ObjectMeta{Name: "uc-bad-conflict", Namespace: defaultCPMNamespace},
 			Spec: UncoreSpec{
 				SysMin: uintPtr(800),
 				SysMax: uintPtr(2400),
@@ -398,14 +398,14 @@ func TestEnvTestWebhook_PowerProfile(t *testing.T) {
 
 	// --- Setup: create a profile and a PowerNodeConfig that references it ---
 	profile := &PowerProfile{
-		ObjectMeta: metav1.ObjectMeta{Name: "pp-shared", Namespace: defaultKPMNamespace},
+		ObjectMeta: metav1.ObjectMeta{Name: "pp-shared", Namespace: defaultCPMNamespace},
 		Spec:       PowerProfileSpec{Shared: true},
 	}
 	require.NoError(t, envtestClient.Create(ctx, profile))
 	t.Cleanup(func() { require.NoError(t, envtestClient.Delete(ctx, profile)) })
 
 	pnc := &PowerNodeConfig{
-		ObjectMeta: metav1.ObjectMeta{Name: "pp-test-config", Namespace: defaultKPMNamespace},
+		ObjectMeta: metav1.ObjectMeta{Name: "pp-test-config", Namespace: defaultCPMNamespace},
 		Spec: PowerNodeConfigSpec{
 			SharedPowerProfile: "pp-shared",
 		},
@@ -424,10 +424,10 @@ func TestEnvTestWebhook_PowerProfile(t *testing.T) {
 	})
 
 	// Create two pods that reference the profile, then verify both PNC and pod reasons appear.
-	podA := testPod("pp-test-pod-a", defaultKPMNamespace, corev1.ResourceList{
+	podA := testPod("pp-test-pod-a", defaultCPMNamespace, corev1.ResourceList{
 		corev1.ResourceName(extendedResourcePrefix + "pp-shared"): resource.MustParse("1"),
 	})
-	podB := testPod("pp-test-pod-b", defaultKPMNamespace, corev1.ResourceList{
+	podB := testPod("pp-test-pod-b", defaultCPMNamespace, corev1.ResourceList{
 		corev1.ResourceName(extendedResourcePrefix + "pp-shared"): resource.MustParse("2"),
 	})
 	require.NoError(t, envtestClient.Create(ctx, podA))
@@ -461,7 +461,7 @@ func TestEnvTestWebhook_PowerProfile(t *testing.T) {
 
 	t.Run("delete/valid unreferenced profile", func(t *testing.T) {
 		unusedProfile := &PowerProfile{
-			ObjectMeta: metav1.ObjectMeta{Name: "pp-unused", Namespace: defaultKPMNamespace},
+			ObjectMeta: metav1.ObjectMeta{Name: "pp-unused", Namespace: defaultCPMNamespace},
 			Spec:       PowerProfileSpec{},
 		}
 		require.NoError(t, envtestClient.Create(ctx, unusedProfile))

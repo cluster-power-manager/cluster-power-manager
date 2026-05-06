@@ -4,9 +4,9 @@ metadata:
   labels:
     app.kubernetes.io/name: Uncore
     app.kubernetes.io/instance: uncore-sample
-    app.kubernetes.io/part-of: kubernetes-power-manager
+    app.kubernetes.io/part-of: cluster-power-manager
     app.kubernetes.io/managed-by: kustomize
-    app.kubernetes.io/created-by: kubernetes-power-manager
+    app.kubernetes.io/created-by: cluster-power-manager
   name: uncore-sample
   namespace: power-manager
 spec:
