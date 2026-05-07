@@ -7,8 +7,6 @@ on:
     paths-ignore:
       - "**.md"
       - LICENSE
-      - OWNERS
-      - OWNERS_ALIASES
       - .gitignore
       - docs/**
       - hack/**
@@ -17,8 +15,6 @@ on:
     paths-ignore:
       - "**.md"
       - LICENSE
-      - OWNERS
-      - OWNERS_ALIASES
       - .gitignore
       - docs/**
       - hack/**
@@ -52,8 +48,11 @@ jobs:
     env:
       REGISTRY: ghcr.io
       OPERATOR_IMAGE: ghcr.io/cluster-power-manager/cluster-power-manager-operator
+      OPERATOR_DESCRIPTION: Cluster Power Manager Operator
       AGENT_IMAGE: ghcr.io/cluster-power-manager/cluster-power-node-agent
+      AGENT_DESCRIPTION: Cluster Power Manager Node Agent
       IMAGE_TAG: latest
+      DOCKER_METADATA_ANNOTATIONS_LEVELS: index
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -69,6 +68,14 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Operator image metadata
+        id: operator-meta
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
+        with:
+          images: ${{ env.OPERATOR_IMAGE }}
+          tags: type=raw,value=${{ env.IMAGE_TAG }}
+          labels: org.opencontainers.image.description=${{ env.OPERATOR_DESCRIPTION }}
+          annotations: org.opencontainers.image.description=${{ env.OPERATOR_DESCRIPTION }}
       - name: ${{ github.event_name == 'push' && 'Build and push operator image' || 'Build operator image' }}
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
@@ -76,9 +83,17 @@ jobs:
           file: build/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name == 'push' }}
-          tags: |
-            ${{ env.OPERATOR_IMAGE }}:${{ env.IMAGE_TAG }}
-            ${{ env.OPERATOR_IMAGE }}:${{ github.sha }}
+          tags: ${{ steps.operator-meta.outputs.tags }}
+          labels: ${{ steps.operator-meta.outputs.labels }}
+          annotations: ${{ steps.operator-meta.outputs.annotations }}
+      - name: Agent image metadata
+        id: agent-meta
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
+        with:
+          images: ${{ env.AGENT_IMAGE }}
+          tags: type=raw,value=${{ env.IMAGE_TAG }}
+          labels: org.opencontainers.image.description=${{ env.AGENT_DESCRIPTION }}
+          annotations: org.opencontainers.image.description=${{ env.AGENT_DESCRIPTION }}
       - name: ${{ github.event_name == 'push' && 'Build and push agent image' || 'Build agent image' }}
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
@@ -86,6 +101,6 @@ jobs:
           file: build/Dockerfile.nodeagent
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name == 'push' }}
-          tags: |
-            ${{ env.AGENT_IMAGE }}:${{ env.IMAGE_TAG }}
-            ${{ env.AGENT_IMAGE }}:${{ github.sha }}
+          tags: ${{ steps.agent-meta.outputs.tags }}
+          labels: ${{ steps.agent-meta.outputs.labels }}
+          annotations: ${{ steps.agent-meta.outputs.annotations }}
