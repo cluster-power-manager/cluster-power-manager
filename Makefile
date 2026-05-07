@@ -369,32 +369,57 @@ endif
 endif
 	@echo "Multi-arch images built and pushed successfully"
 
-.PHONY: controller-gen kustomize bundle bundle-build bundle-push
+.PHONY: controller-gen kustomize bundle bundle-build bundle-push bundle-run bundle-clean
 
 # Generate bundle manifests and metadata, then validate generated files.
+# OLM bundle targets are OCP-specific and require OCP=true.
+ifeq (true, $(OCP))
 bundle: update manifests kustomize operator-sdk
 # directory used to get image name for bundle
 	$(OPERATOR_SDK) generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle -q --use-image-digests --overwrite --version $(BUNDLE_VERSION) $(BUNDLE_METADATA_OPTS)
 	$(OPERATOR_SDK) bundle validate ./bundle
+else
+bundle:
+	$(error OLM bundle targets require OCP=true)
+endif
 
 # Build the bundle image.
+ifeq (true, $(OCP))
 bundle-build:
 	$(IMGTOOL) build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+else
+bundle-build:
+	$(error OLM bundle targets require OCP=true)
+endif
+
 # Push bundle image
+ifeq (true, $(OCP))
 bundle-push:
 	$(IMGTOOL) push $(BUNDLE_IMG)
+else
+bundle-push:
+	$(error OLM bundle targets require OCP=true)
+endif
 
-.PHONY: bundle-run
+ifeq (true, $(OCP))
 bundle-run: # Install bundle on cluster using operator sdk.
 	oc create ns $(CPM_NAMESPACE)
 	$(OPERATOR_SDK) --security-context-config restricted -n $(CPM_NAMESPACE) run bundle $(BUNDLE_IMG)
+else
+bundle-run:
+	$(error OLM bundle targets require OCP=true)
+endif
 
-.PHONY: bundle-clean
+ifeq (true, $(OCP))
 bundle-clean: # Uninstall bundle on cluster using operator sdk.
 	$(OPERATOR_SDK) cleanup $(PROJECT_NAME) -n $(CPM_NAMESPACE)
 	oc delete ns $(CPM_NAMESPACE)
+else
+bundle-clean:
+	$(error OLM bundle targets require OCP=true)
+endif
 
 .PHONY: operator-sdk
 operator-sdk: $(OPERATOR_SDK) ## Download operator-sdk locally if necessary.
@@ -429,13 +454,23 @@ $(OPM): $(LOCALBIN)
 	fi
 
 .PHONY: catalog-build
+ifeq (true, $(OCP))
 catalog-build: opm ## Build a catalog image.
 	$(OPM) index add --container-tool $(IMGTOOL) --mode semver --tag $(CATALOG_IMG) --bundles $(BUNDLE_IMGS) $(if ifeq $(TLS_VERIFY) false, --skip-tls) $(FROM_INDEX_OPT)
+else
+catalog-build:
+	$(error OLM catalog targets require OCP=true)
+endif
 
 # Push the catalog image.
 .PHONY: catalog-push
+ifeq (true, $(OCP))
 catalog-push: ## Push a catalog image.
 	 $(IMGTOOL) push ${CATALOG_IMG}
+else
+catalog-push:
+	$(error OLM catalog targets require OCP=true)
+endif
 
 coverage:
 	go test -v -coverprofile=coverage.out ./controllers/ ./pkg/...

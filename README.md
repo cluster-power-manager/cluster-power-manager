@@ -403,6 +403,23 @@ You can use the HELM_CHART and OCP parameters to deploy an older or Openshift sp
 
 Please note when installing older versions that certain features listed in this README may not be supported.
 
+## OLM Bundle (OpenShift only)
+
+The OLM (Operator Lifecycle Manager) bundle in `bundle/` and the ClusterServiceVersion in
+`config/manifests/` are **OCP-specific**. They are used to package the operator for deployment
+via OLM on OpenShift clusters.
+
+All OLM-related Makefile targets (`bundle`, `bundle-build`, `bundle-push`, `bundle-run`,
+`bundle-clean`, `catalog-build`, `catalog-push`) require `OCP=true`:
+
+```console
+OCP=true make bundle
+OCP=true make bundle-build
+...
+```
+
+Running these targets without `OCP=true` will produce an error.
+
 ## Components
 
 ### Power Optimization Library
