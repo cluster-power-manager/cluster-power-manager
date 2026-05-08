@@ -32,11 +32,8 @@ spec:
             - --enable-leader-election
             - --zap-log-level
             - "3"
-          env:
-            - name: RELATED_IMAGE_AGENT
-              value: quay.io/openshift-kni/kubernetes-power-node-agent:0.0.1
           imagePullPolicy: IfNotPresent
-          image: quay.io/openshift-kni/kubernetes-power-manager-operator:0.0.1
+          image: ghcr.io/cluster-power-manager/cluster-power-manager-operator:latest
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:

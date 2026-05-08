@@ -69,7 +69,7 @@ operator:
       name: power-manager-operator
     command: /manager
     args: --enable-leader-election
-    image: $(IMAGE_REGISTRY)/kubernetes-power-manager-operator:$(VERSION)
+    image: ghcr.io/cluster-power-manager/cluster-power-manager-operator:latest
     name: manager
     cpu:
       limits: 100m

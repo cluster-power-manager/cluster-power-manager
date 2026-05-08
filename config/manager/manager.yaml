@@ -33,7 +33,7 @@ spec:
             - --zap-log-level
             - "3"
           imagePullPolicy: IfNotPresent
-          image: quay.io/openshift-kni/kubernetes-power-manager-operator:0.0.1
+          image: ghcr.io/cluster-power-manager/cluster-power-manager-operator:latest
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:

@@ -17,7 +17,7 @@ spec:
       tolerations:
         - operator: Exists
       containers:
-        - image: quay.io/openshift-kni/kubernetes-power-node-agent:0.0.1
+        - image: ghcr.io/cluster-power-manager/cluster-power-node-agent:latest
           imagePullPolicy: IfNotPresent
           securityContext:
             privileged: true

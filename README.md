@@ -341,10 +341,10 @@ After pushing, verify the multi-arch manifest:
 
 ```console
 # Using Podman
-podman manifest inspect quay.io/<user/org>/kubernetes-power-manager-operator:latest
+podman manifest inspect ghcr.io/<user/org>/cluster-power-manager-operator:latest
 
 # Using Docker
-docker buildx imagetools inspect quay.io/<user/org>/kubernetes-power-manager-operator:latest
+docker buildx imagetools inspect ghcr.io/<user/org>/cluster-power-manager-operator:latest
 ```
 
 ## Deploying the Cluster Power Manager using kustomize
@@ -405,20 +405,46 @@ Please note when installing older versions that certain features listed in this 
 
 ## OLM Bundle (OpenShift only)
 
-The OLM (Operator Lifecycle Manager) bundle in `bundle/` and the ClusterServiceVersion in
-`config/manifests/` are **OCP-specific**. They are used to package the operator for deployment
-via OLM on OpenShift clusters.
+The OLM bundle is **OCP-specific** and is used to package the operator for deployment via
+OLM on OpenShift clusters. The `bundle/` directory is not checked into version control — it
+is generated on demand by `make bundle`. All OLM-related Makefile targets require `OCP=true`.
 
-All OLM-related Makefile targets (`bundle`, `bundle-build`, `bundle-push`, `bundle-run`,
-`bundle-clean`, `catalog-build`, `catalog-push`) require `OCP=true`:
+### Building and deploying via OLM bundle
 
-```console
-OCP=true make bundle
-OCP=true make bundle-build
-...
-```
+1. **Update image references, build and push operator and agent images:**
 
-Running these targets without `OCP=true` will produce an error.
+    ```console
+    OCP=true IMAGE_REGISTRY=ghcr.io/<user> VERSION=<tag> IMGTOOL=<docker|podman> make update build-push-images-ocp
+    ```
+
+2. **Generate the OLM bundle:**
+
+    ```console
+    OCP=true IMAGE_REGISTRY=ghcr.io/<user> VERSION=<tag> BUNDLE_VERSION=<semver> make bundle
+    ```
+
+    > `VERSION` is the image tag (e.g. `v1.0.0`). `BUNDLE_VERSION` is the OLM semver
+    > (e.g. `1.0.0`, no `v` prefix). They are independent.
+
+3. **Build and push the bundle image:**
+
+    ```console
+    OCP=true IMAGE_REGISTRY=ghcr.io/<user> VERSION=<tag> IMGTOOL=<docker|podman> make bundle-build bundle-push
+    ```
+
+4. **Install the bundle on the cluster:**
+
+    ```console
+    OCP=true IMAGE_REGISTRY=ghcr.io/<user> VERSION=<tag> make bundle-run
+    ```
+
+5. **Uninstall:**
+
+    ```console
+    OCP=true make bundle-clean
+    ```
+
+Running any OLM target without `OCP=true` will produce an error.
 
 ## Components
 
