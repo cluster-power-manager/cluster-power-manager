@@ -153,8 +153,8 @@ func Test_addPowerNodeStatusProfileEntry(t *testing.T) {
 			shouldVerifyPatchObject: true,
 			verifyPatchedObject: func(t *testing.T, pns *powerv1alpha1.PowerNodeState) {
 				// Verify TypeMeta and ObjectMeta are set correctly.
-				assert.Equal(t, "power.cluster-power-manager.github.io/v1alpha1", pns.APIVersion, "APIVersion should be set for SSA")
-				assert.Equal(t, "PowerNodeState", pns.Kind, "Kind should be set for SSA")
+				assert.Equal(t, powerv1alpha1.GroupVersion.String(), pns.APIVersion, "APIVersion should be set for SSA")
+				assert.Equal(t, PowerNodeStateKind, pns.Kind, "Kind should be set for SSA")
 				assert.Equal(t, "test-node-power-state", pns.Name)
 				assert.Equal(t, PowerNamespace, pns.Namespace)
 
@@ -173,8 +173,8 @@ func Test_addPowerNodeStatusProfileEntry(t *testing.T) {
 			expectError:             false,
 			verifyPatchedObject: func(t *testing.T, pns *powerv1alpha1.PowerNodeState) {
 				// Verify TypeMeta and ObjectMeta are set for SSA.
-				assert.Equal(t, "power.cluster-power-manager.github.io/v1alpha1", pns.APIVersion, "APIVersion should be set for SSA")
-				assert.Equal(t, "PowerNodeState", pns.Kind, "Kind should be set for SSA")
+				assert.Equal(t, powerv1alpha1.GroupVersion.String(), pns.APIVersion, "APIVersion should be set for SSA")
+				assert.Equal(t, PowerNodeStateKind, pns.Kind, "Kind should be set for SSA")
 				assert.Equal(t, "test-node-power-state", pns.Name)
 				assert.Equal(t, PowerNamespace, pns.Namespace)
 

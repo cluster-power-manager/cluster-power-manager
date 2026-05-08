@@ -1946,15 +1946,16 @@ func TestPowerProfile_Reconcile_ProfileUpdateAffectsAllPools(t *testing.T) {
 			verifyProfileParameters(currentProfile, tc.profileName, 3600, 3200,
 				"powersave", "performance", map[string]bool{"C0": true, "C1": true, "C1E": false, "C3": false})
 
-			if tc.expectSharedUpdate {
+			switch {
+			case tc.expectSharedUpdate:
 				currentProfile := sharedPool.GetPowerProfile()
 				assert.NotNil(t, currentProfile, "Shared pool should have the updated profile")
 				verifyProfileParameters(currentProfile, tc.profileName, 3600, 3200,
 					"powersave", "performance", map[string]bool{"C0": true, "C1": true, "C1E": false, "C3": false})
-			} else if tc.setupSharedPoolProfile == "" {
+			case tc.setupSharedPoolProfile == "":
 				currentProfile := sharedPool.GetPowerProfile()
 				assert.Nil(t, currentProfile, "Shared pool should not have a profile")
-			} else if tc.setupSharedPoolProfile == tc.otherProfileName {
+			case tc.setupSharedPoolProfile == tc.otherProfileName:
 				currentProfile := sharedPool.GetPowerProfile()
 				assert.NotNil(t, currentProfile, "Shared pool should have the original profile")
 				verifyProfileParameters(currentProfile, tc.otherProfileName, 3000, 2000,

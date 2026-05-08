@@ -99,6 +99,7 @@ type CStatesConfig struct {
 	MaxLatencyUs *int `json:"maxLatencyUs,omitempty"`
 }
 
+// CpuScalingPolicy configures DPDK telemetry-based dynamic CPU frequency scaling.
 // +kubebuilder:validation:XValidation:rule="duration(self.samplePeriod).getMilliseconds() >= 10 && duration(self.samplePeriod).getMilliseconds() <= 1000",message="samplePeriod must be between 10ms and 1s"
 // +kubebuilder:validation:XValidation:rule="duration(self.cooldownPeriod).getMilliseconds() >= duration(self.samplePeriod).getMilliseconds()",message="cooldownPeriod must be larger than samplePeriod"
 type CpuScalingPolicy struct {

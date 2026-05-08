@@ -26,11 +26,6 @@ func TestNewPowerNodeData(t *testing.T) {
 	expected := []string{}
 	assert.Equal(t, powerNodeData.PowerNodeList, expected, "PowerNodeList field is not empty.")
 
-	//making sure that list contains only newly added node
-	for i := 0; i < len(expected); i++ {
-		assert.Equal(t, powerNodeData.PowerNodeList, expected, "PowerNodeList field is not empty.")
-		break
-	}
 }
 
 func TestUpdatePowerNodeData(t *testing.T) {
@@ -59,10 +54,10 @@ func TestUpdatePowerNodeData(t *testing.T) {
 
 func TestDeletePowerNodeData(t *testing.T) {
 	testData := &PowerNodeData{
-		PowerNodeList: []string{"node1", "node2", "node3"}, //generic nodes
+		PowerNodeList: []string{"node1", "node2", "node3"}, // generic nodes
 	}
 
-	testData.DeletePowerNodeData("node2") //deleting node2
+	testData.DeletePowerNodeData("node2") // deleting node2
 
 	expected := []string{"node1", "node3"}
 

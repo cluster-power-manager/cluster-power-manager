@@ -237,8 +237,8 @@ func (r *PowerConfigReconciler) applyNodeInfo(ctx context.Context, node *corev1.
 
 	patchNodeState := &powerv1alpha1.PowerNodeState{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "power.cluster-power-manager.github.io/v1alpha1",
-			Kind:       "PowerNodeState",
+			APIVersion: powerv1alpha1.GroupVersion.String(),
+			Kind:       PowerNodeStateKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      powerNodeStateName,
@@ -310,7 +310,7 @@ func (r *PowerConfigReconciler) createDaemonSetIfNotPresent(c context.Context, p
 }
 
 func createDaemonSetFromManifest(path string) (*appsv1.DaemonSet, error) {
-	yamlFile, err := os.ReadFile(path)
+	yamlFile, err := os.ReadFile(path) //nolint:gosec // path is from NodeAgentDaemonSetPath, not user input
 	if err != nil {
 		return nil, err
 	}

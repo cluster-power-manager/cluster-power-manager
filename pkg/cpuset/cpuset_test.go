@@ -71,12 +71,12 @@ func areSlicesEqualInt64(sliceA, sliceB []int64) bool {
 	return true
 }
 
-//Tests
+// Tests
 
 func TestNewBuilder(t *testing.T) {
 	builder := NewBuilder()
 
-	//Assert that the elemennt map is initialised ant not nil
+	// Assert that the element map is initialised and not nil
 	if builder.result.elems == nil {
 		t.Errorf("Expected elems map to be initialized, but it was nil")
 	}
@@ -107,7 +107,7 @@ func TestAdd(t *testing.T) {
 }
 
 func TestResult(t *testing.T) {
-	//Test case -- Test with elements added
+	// Test case -- Test with elements added
 	builderA := NewBuilder()
 	builderA.Add(1, 2, 3)
 
@@ -122,7 +122,7 @@ func TestResult(t *testing.T) {
 	}
 
 	assert.True(t, expectedA.Equals(cpuSetA))
-	//Test case -- Test builder is marked "done"
+	// Test case -- Test builder is marked "done"
 	builderB := NewBuilder()
 	builderB.Result()
 
@@ -130,7 +130,7 @@ func TestResult(t *testing.T) {
 		t.Error("Expected: Builder to be marked 'done'. Actual: Builder not marked 'done'.")
 	}
 
-	//Test case -- Checks Adds dont effect result
+	// Test case -- Checks Adds dont effect result
 	builderC := NewBuilder()
 	builderC.Result()
 	builderC.Add(4)
@@ -141,17 +141,17 @@ func TestResult(t *testing.T) {
 }
 
 func TestNewCPUSet(t *testing.T) {
-	//Test case -- Create a CPUSet with elements
+	// Test case -- Create a CPUSet with elements
 	cpusetA := NewCPUSet(1, 2, 3)
 
-	//Checks elemnts are present
+	// Checks elemnts are present
 	for i := 1; i <= 3; i++ {
 		if _, found := cpusetA.elems[i]; !found {
 			t.Errorf("Expected: Element %d in CPUSet. Actual: Element was not found", i)
 		}
 	}
 
-	//Test case -- Create a CPUSet with single element
+	// Test case -- Create a CPUSet with single element
 	cpusetB := NewCPUSet(10)
 
 	if _, found := cpusetB.elems[10]; !found {
@@ -166,7 +166,7 @@ func TestNewCPUSet(t *testing.T) {
 }
 
 func TestSize(t *testing.T) {
-	//Test case -- Size of empty set
+	// Test case -- Size of empty set
 	cpusetA := &CPUSet{
 		elems: map[int]struct{}{},
 	}
@@ -174,7 +174,7 @@ func TestSize(t *testing.T) {
 	sizeA := cpusetA.Size()
 	assert.Equal(t, 0, sizeA)
 
-	//Test case -- Size of a non-empty set
+	// Test case -- Size of a non-empty set
 	cpusetB := &CPUSet{
 		elems: map[int]struct{}{
 			1: {},
@@ -188,14 +188,14 @@ func TestSize(t *testing.T) {
 }
 
 func TestIsEmpty(t *testing.T) {
-	//Test case -- Empty CPUSet
+	// Test case -- Empty CPUSet
 	cpusetA := &CPUSet{
 		elems: map[int]struct{}{},
 	}
 
 	assert.True(t, cpusetA.IsEmpty())
 
-	//Test case -- Non-empty set
+	// Test case -- Non-empty set
 	cpusetB := &CPUSet{
 		elems: map[int]struct{}{
 			1: {},
@@ -208,7 +208,7 @@ func TestIsEmpty(t *testing.T) {
 }
 
 func TestContains(t *testing.T) {
-	//Test case -- CPUSet contains the element
+	// Test case -- CPUSet contains the element
 	cpusetA := &CPUSet{
 		elems: map[int]struct{}{
 			1: {},
@@ -221,7 +221,7 @@ func TestContains(t *testing.T) {
 		t.Errorf("Expected: Set contains element 1. Actual: Element 1 not found in set")
 	}
 
-	//Test case -- Non-empty set
+	// Test case -- Non-empty set
 	cpusetB := &CPUSet{
 		elems: map[int]struct{}{
 			4: {},
@@ -236,7 +236,7 @@ func TestContains(t *testing.T) {
 }
 
 func TestEquals(t *testing.T) {
-	//Test case -- Two equal sets
+	// Test case -- Two equal sets
 	cpusetA := CPUSet{
 		elems: map[int]struct{}{
 			1: {},
@@ -255,7 +255,7 @@ func TestEquals(t *testing.T) {
 
 	assert.True(t, cpusetA.Equals(cpusetB))
 
-	//Test case -- Two unequals
+	// Test case -- Two unequals
 	cpusetX := CPUSet{
 		elems: map[int]struct{}{
 			1: {},
@@ -275,7 +275,7 @@ func TestEquals(t *testing.T) {
 }
 
 func TestFilter(t *testing.T) {
-	//Test case: Filter even numbers
+	// Test case: Filter even numbers
 	cpusetA := &CPUSet{
 		elems: map[int]struct{}{
 			1: {},
@@ -300,7 +300,7 @@ func TestFilter(t *testing.T) {
 		t.Error(("Expected: even number 2 found. Actual: 2 has been filtered out"))
 	}
 
-	//Test case: Filter numbers smaller than 4
+	// Test case: Filter numbers smaller than 4
 	cpusetB := &CPUSet{
 		elems: map[int]struct{}{
 			1: {},
@@ -331,7 +331,7 @@ func TestFilter(t *testing.T) {
 }
 
 func TestFilterNot(t *testing.T) {
-	//Test case: Filter even numbers
+	// Test case: Filter even numbers
 	cpusetA := &CPUSet{
 		elems: map[int]struct{}{
 			1: {},
@@ -356,7 +356,7 @@ func TestFilterNot(t *testing.T) {
 		t.Error(("Expected: even number 2 filtered out. Actual: 2 has not been filtered out"))
 	}
 
-	//Test case: Filter numbers smaller than 4
+	// Test case: Filter numbers smaller than 4
 	cpusetB := &CPUSet{
 		elems: map[int]struct{}{
 			1: {},
@@ -387,7 +387,7 @@ func TestFilterNot(t *testing.T) {
 }
 
 func TestSubsetOf(t *testing.T) {
-	//Test case -- Empty set is a subset of any set
+	// Test case -- Empty set is a subset of any set
 	cpusetA := &CPUSet{
 		elems: map[int]struct{}{},
 	}
@@ -399,7 +399,7 @@ func TestSubsetOf(t *testing.T) {
 		t.Error("Expected: Empty set to be a subset of any set. Actual: It was not")
 	}
 
-	//Test case -- Proper subset
+	// Test case -- Proper subset
 	cpusetJ := &CPUSet{
 		elems: map[int]struct{}{
 			1: {},
@@ -418,7 +418,7 @@ func TestSubsetOf(t *testing.T) {
 		t.Error("Expected: SetJ is a subset of setK. Actual: It was not a subset")
 	}
 
-	//Test case -- Empty set is a subset of any set
+	// Test case -- Empty set is a subset of any set
 	cpusetX := &CPUSet{
 		elems: map[int]struct{}{
 			1: {},
@@ -440,7 +440,7 @@ func TestSubsetOf(t *testing.T) {
 
 func TestUnion(t *testing.T) {
 
-	//Test case -- Two empty
+	// Test case -- Two empty
 	cpusetA := CPUSet{
 		elems: map[int]struct{}{},
 	}
@@ -455,7 +455,7 @@ func TestUnion(t *testing.T) {
 	unionA := cpusetA.Union(cpusetB)
 	assert.True(t, expectedA.Equals(unionA))
 
-	//Test case -- One empty, one with two elements
+	// Test case -- One empty, one with two elements
 	cpusetX := CPUSet{
 		elems: map[int]struct{}{},
 	}
@@ -478,7 +478,7 @@ func TestUnion(t *testing.T) {
 }
 
 func TestUnionAll(t *testing.T) {
-	//Test case -- Empty set union with empty slices should result in an empty set
+	// Test case -- Empty set union with empty slices should result in an empty set
 	cpusetA := CPUSet{
 		elems: map[int]struct{}{},
 	}
@@ -492,7 +492,7 @@ func TestUnionAll(t *testing.T) {
 
 	assert.True(t, expectedA.Equals(union_allA))
 
-	//Test case -- Non-empty set union with non-empty sets
+	// Test case -- Non-empty set union with non-empty sets
 	cpusetJ := CPUSet{
 		elems: map[int]struct{}{
 			1: {},
@@ -542,7 +542,7 @@ func TestIntersection(t *testing.T) {
 	intersectionA := cpusetA.Intersection(cpusetB)
 	assert.True(t, expectedA.Equals(intersectionA))
 
-	//Test case -- Non empty set intersects with an empty should produce empty
+	// Test case -- Non empty set intersects with an empty should produce empty
 	cpusetJ := CPUSet{
 		elems: map[int]struct{}{
 			1: {},
@@ -560,7 +560,7 @@ func TestIntersection(t *testing.T) {
 	intersectionB := cpusetJ.Intersection(cpusetK)
 	assert.True(t, expectedB.Equals(intersectionB))
 
-	//Test case -- Non-empty set intersects with another non-empty set
+	// Test case -- Non-empty set intersects with another non-empty set
 	cpusetX := CPUSet{
 		elems: map[int]struct{}{
 			1: {},
@@ -588,7 +588,7 @@ func TestIntersection(t *testing.T) {
 }
 
 func TestDifference(t *testing.T) {
-	//Test case -- Empty set intersection with another empty set should result in an empty set
+	// Test case -- Empty set intersection with another empty set should result in an empty set
 	cpusetA := CPUSet{
 		elems: map[int]struct{}{},
 	}
@@ -601,7 +601,7 @@ func TestDifference(t *testing.T) {
 
 	differenceA := cpusetA.Difference(cpusetB)
 	assert.True(t, expectedA.Equals(differenceA))
-	//Test case -- Non empty set difference with an empty should produce non-empty
+	// Test case -- Non empty set difference with an empty should produce non-empty
 	cpusetJ := CPUSet{
 		elems: map[int]struct{}{
 			1: {},
@@ -623,7 +623,7 @@ func TestDifference(t *testing.T) {
 }
 
 func TestToSlice(t *testing.T) {
-	//Test case -- Empty set should return empty slice
+	// Test case -- Empty set should return empty slice
 	cpusetA := &CPUSet{
 		elems: map[int]struct{}{},
 	}
@@ -632,7 +632,7 @@ func TestToSlice(t *testing.T) {
 		t.Error("Expected: Empty slice. Actual: Non-empty slice")
 	}
 
-	//Test case -- Non-empty should sort and return slice
+	// Test case -- Non-empty should sort and return slice
 	cpusetB := &CPUSet{
 		elems: map[int]struct{}{
 			4: {},
@@ -650,7 +650,7 @@ func TestToSlice(t *testing.T) {
 }
 
 func TestToSliceNoSort(t *testing.T) {
-	//Test case -- Empty set should return empty slice
+	// Test case -- Empty set should return empty slice
 	cpusetA := &CPUSet{
 		elems: map[int]struct{}{},
 	}
@@ -659,7 +659,7 @@ func TestToSliceNoSort(t *testing.T) {
 		t.Error("Expected: Empty slice. Actual: Non-empty slice")
 	}
 
-	//Test case -- Non-empty should sort and return slice
+	// Test case -- Non-empty should sort and return slice
 	cpusetB := &CPUSet{
 		elems: map[int]struct{}{
 			4: {},
@@ -678,14 +678,14 @@ func TestToSliceNoSort(t *testing.T) {
 }
 
 func TestToSliceInt64(t *testing.T) {
-	//Test case -- Empty set should return empty slice
+	// Test case -- Empty set should return empty slice
 	cpusetA := &CPUSet{
 		elems: map[int]struct{}{},
 	}
 	sliceA := cpusetA.ToSliceInt64()
 	assert.Nil(t, sliceA)
 
-	//Test case -- Non-empty should sort and return slice
+	// Test case -- Non-empty should sort and return slice
 	cpusetB := &CPUSet{
 		elems: map[int]struct{}{
 			4: {},
@@ -703,7 +703,7 @@ func TestToSliceInt64(t *testing.T) {
 
 func TestToSliceNoSortInt64(t *testing.T) {
 
-	//Test case -- Empty set should return empty slice
+	// Test case -- Empty set should return empty slice
 	cpusetA := &CPUSet{
 		elems: map[int]struct{}{},
 	}
@@ -713,7 +713,7 @@ func TestToSliceNoSortInt64(t *testing.T) {
 	sliceA := cpusetA.ToSliceNoSortInt64()
 	assert.True(t, areSlicesEqualInt64(sliceA, expectedSliceA))
 
-	//Test case -- Non-empty should sort and return slice
+	// Test case -- Non-empty should sort and return slice
 	cpusetB := &CPUSet{
 		elems: map[int]struct{}{
 			4: {},
@@ -730,7 +730,7 @@ func TestToSliceNoSortInt64(t *testing.T) {
 }
 
 func TestString(t *testing.T) {
-	//Test case -- Empty set should return an empty string
+	// Test case -- Empty set should return an empty string
 	cpusetA := &CPUSet{
 		elems: map[int]struct{}{},
 	}
@@ -740,7 +740,7 @@ func TestString(t *testing.T) {
 	resultA := cpusetA.String()
 	assert.Equal(t, expectedStringA, resultA)
 
-	//Test case -- Non-empty set with consecutive elements should return string with ranges
+	// Test case -- Non-empty set with consecutive elements should return string with ranges
 	cpusetB := &CPUSet{
 		elems: map[int]struct{}{
 			1: {},
@@ -757,7 +757,7 @@ func TestString(t *testing.T) {
 	resultB := cpusetB.String()
 	assert.Equal(t, expectedStringB, resultB)
 
-	//Test case -- Non-empty set with non-consecutive elements should return string with individual elements
+	// Test case -- Non-empty set with non-consecutive elements should return string with individual elements
 	cpusetC := &CPUSet{
 		elems: map[int]struct{}{
 			1: {},
@@ -773,7 +773,7 @@ func TestString(t *testing.T) {
 }
 
 func TestMustParse(t *testing.T) {
-	//Test case -- Valid string parsed
+	// Test case -- Valid string parsed
 	inputStrA := "1,2,3,5-7,10"
 	expectedA := CPUSet{
 		elems: map[int]struct{}{
@@ -792,7 +792,7 @@ func TestMustParse(t *testing.T) {
 }
 
 func TestParse(t *testing.T) {
-	//Test case -- Valid string parsed
+	// Test case -- Valid string parsed
 	inputStrA := ""
 	expectedA := CPUSet{
 		elems: map[int]struct{}{},
@@ -802,7 +802,7 @@ func TestParse(t *testing.T) {
 	assert.NoError(t, errA)
 	assert.Equal(t, expectedA, resultA)
 
-	//Test case -- Single elements seperated by commas
+	// Test case -- Single elements separated by commas
 	inputStrB := "1,3,5,7"
 	expectedB := CPUSet{
 		elems: map[int]struct{}{
@@ -817,7 +817,7 @@ func TestParse(t *testing.T) {
 	assert.NoError(t, errB)
 	assert.Equal(t, expectedB, resultB)
 
-	//Test case -- Range of elemenst
+	// Test case -- Range of elemenst
 	inputStrC := "1-4,6,8-9"
 	expectedC := CPUSet{
 		elems: map[int]struct{}{
@@ -837,7 +837,7 @@ func TestParse(t *testing.T) {
 }
 
 func TestClone(t *testing.T) {
-	//Test case -- Empty set should return empty
+	// Test case -- Empty set should return empty
 	cpusetA := CPUSet{
 		elems: map[int]struct{}{},
 	}
@@ -845,7 +845,7 @@ func TestClone(t *testing.T) {
 	cloneA := cpusetA.Clone()
 	assert.True(t, cpusetA.Equals(cloneA))
 
-	//Test case -- Non-Empty set should return mom-empty
+	// Test case -- Non-Empty set should return mom-empty
 	cpusetB := CPUSet{
 		elems: map[int]struct{}{
 			1: {},

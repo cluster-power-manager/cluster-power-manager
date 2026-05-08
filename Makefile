@@ -20,6 +20,9 @@ OPERATOR_SDK_VERSION ?= 1.42.0
 # OPM_VERSION defines the opm version to download from GitHub releases.
 OPM_VERSION ?= v1.52.0
 
+# GOLANGCI_LINT_VERSION defines the golangci-lint version to download.
+GOLANGCI_LINT_VERSION ?= v2.12.2
+
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION ?= 1.32.0
 ENVTEST_VERSION ?= release-0.21
@@ -69,6 +72,7 @@ CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 OPERATOR_SDK ?= $(LOCALBIN)/operator-sdk
 OPM ?= $(LOCALBIN)/opm
+GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
 
 .PHONY: kubectl
 kubectl: $(KUBECTL) ## Use envtest to download kubectl
@@ -115,6 +119,19 @@ $(ENVTEST): $(LOCALBIN)
 		echo "Downloading setup-envtest..." ;\
 		GOFLAGS="-mod=mod" GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@$(ENVTEST_VERSION) ;\
 		echo "setup-envtest downloaded successfully." ;\
+	fi
+
+.PHONY: golangci-lint-download
+golangci-lint-download: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary. If wrong version is installed, it will be removed before downloading.
+$(GOLANGCI_LINT): $(LOCALBIN)
+	@if test -x $(GOLANGCI_LINT) && ! $(GOLANGCI_LINT) version 2>/dev/null | grep -q "$(subst v,,$(GOLANGCI_LINT_VERSION))"; then \
+		echo "$(GOLANGCI_LINT) version is not expected $(GOLANGCI_LINT_VERSION). Removing it before installing."; \
+		rm -rf $(GOLANGCI_LINT); \
+	fi
+	@if [ ! -f $(GOLANGCI_LINT) ]; then \
+		echo "Downloading golangci-lint..." ;\
+		curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b $(LOCALBIN) $(GOLANGCI_LINT_VERSION) ;\
+		echo "golangci-lint downloaded successfully." ;\
 	fi
 
 # Options for 'bundle-build'
@@ -223,7 +240,7 @@ helm-uninstall:
 	helm uninstall cluster-power-manager-$(HELM_CHART)
 	helm uninstall cluster-power-manager-crds
 
-.PHONY: install uninstall deploy manifests fmt vet tls
+.PHONY: install uninstall deploy manifests fmt vet tls golangci-lint
 # Install CRDs into a cluster
 install: manifests kustomize
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
@@ -269,6 +286,12 @@ fmt:
 # Run go vet against code
 vet:
 	go vet -composites=false ./...
+
+# Run golangci-lint against code
+golangci-lint: golangci-lint-download
+	@echo "Running golangci-lint on repository go files..."
+	$(GOLANGCI_LINT) run -v
+	@echo "Golangci-lint linting completed successfully."
 
 # Testing the generation of TLS certificates
 tls:

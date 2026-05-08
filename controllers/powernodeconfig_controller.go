@@ -172,7 +172,7 @@ func (r *PowerNodeConfigReconciler) applyPowerNodeConfig(
 		return ctrl.Result{}, err
 	}
 
-	reservedProfileCPUs, reservedErrors := r.configureReservedPools(config, nodeName, logger)
+	reservedProfileCPUs, reservedErrors := r.configureReservedPools(config, nodeName)
 
 	// Collect all status errors.
 	var statusErrors []string
@@ -271,7 +271,6 @@ func (r *PowerNodeConfigReconciler) configureSharedPool(config *powerv1alpha1.Po
 func (r *PowerNodeConfigReconciler) configureReservedPools(
 	config *powerv1alpha1.PowerNodeConfig,
 	nodeName string,
-	logger *logr.Logger,
 ) ([]powerv1alpha1.PowerProfileCPUs, []error) {
 	// Remove existing pseudo-reserved pools.
 	pools := r.PowerLibrary.GetAllExclusivePools()
@@ -398,8 +397,8 @@ func (r *PowerNodeConfigReconciler) updatePowerNodeStatusPools(
 
 	patchNodeState := &powerv1alpha1.PowerNodeState{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "power.cluster-power-manager.github.io/v1alpha1",
-			Kind:       "PowerNodeState",
+			APIVersion: powerv1alpha1.GroupVersion.String(),
+			Kind:       PowerNodeStateKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      powerNodeStateName,
@@ -428,8 +427,8 @@ func (r *PowerNodeConfigReconciler) removePowerNodeStatusPools(ctx context.Conte
 
 	patchNodeState := &powerv1alpha1.PowerNodeState{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "power.cluster-power-manager.github.io/v1alpha1",
-			Kind:       "PowerNodeState",
+			APIVersion: powerv1alpha1.GroupVersion.String(),
+			Kind:       PowerNodeStateKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      powerNodeStateName,

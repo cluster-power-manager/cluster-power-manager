@@ -339,9 +339,7 @@ func TestDPDKConnection_connectLoop(t *testing.T) {
 	dpdkConn := createNewDPDKConnection()
 	ctx, cancel := context.WithCancel(context.TODO())
 	t.Cleanup(cancel)
-	var conn net.Conn = nil
-
-	conn = dpdkConn.connectLoop(ctx)
+	conn := dpdkConn.connectLoop(ctx)
 
 	assert.NotNil(t, conn)
 }
@@ -434,7 +432,7 @@ func TestDPDKConnection_processCommand(t *testing.T) {
 				c.AssertCalled(t, "SetWriteDeadline", timeout)
 				c.AssertCalled(t, "Write", commandBytes)
 				c.AssertCalled(t, "SetReadDeadline", timeout)
-				// Anything is used here instead of AnythingOfType beacuse assert
+				// Anything is used here instead of AnythingOfType because assert
 				// still makes a distinction between filled and empty slice.
 				c.AssertCalled(t, "Read", mock.Anything)
 			},
@@ -455,7 +453,7 @@ func TestDPDKConnection_processCommand(t *testing.T) {
 				c.AssertCalled(t, "SetWriteDeadline", timeout)
 				c.AssertCalled(t, "Write", commandBytes)
 				c.AssertCalled(t, "SetReadDeadline", timeout)
-				// Anything is used here instead of AnythingOfType beacuse assert
+				// Anything is used here instead of AnythingOfType because assert
 				// still makes a distinction between filled and empty slice.
 				c.AssertCalled(t, "Read", mock.Anything)
 			},
@@ -483,7 +481,7 @@ func TestDPDKConnection_processCommand(t *testing.T) {
 				c.AssertCalled(t, "SetWriteDeadline", timeout)
 				c.AssertCalled(t, "Write", commandBytes)
 				c.AssertCalled(t, "SetReadDeadline", timeout)
-				// Anything is used here instead of AnythingOfType beacuse assert
+				// Anything is used here instead of AnythingOfType because assert
 				// still makes a distinction between filled and empty slice.
 				c.AssertCalled(t, "Read", mock.Anything)
 			},

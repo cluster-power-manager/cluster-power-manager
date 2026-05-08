@@ -511,7 +511,7 @@ func (cl *DPDKTelemetryClientMock) Close() { cl.Called() }
 func intPtr(v int) *int { return &v }
 
 func setupDummyFiles(cores int, packages int, diesPerPackage int, cpufiles map[string]string) (power.Host, func(), error) {
-	//variables for various files
+	// variables for various files
 	path := "testing/cpus"
 	pStatesDrvFile := "cpufreq/scaling_driver"
 
@@ -542,13 +542,12 @@ func setupDummyFiles(cores int, packages int, diesPerPackage int, cpufiles map[s
 	_, ok := cpufiles["uncore_max"]
 	if ok {
 		os.Mkdir("testing", os.ModePerm)
-		os.WriteFile("testing/proc.modules", []byte("intel_uncore_frequency"+"\n"), 0644)
+		os.WriteFile("testing/proc.modules", []byte("intel_uncore_frequency"+"\n"), 0o644)
 		os.MkdirAll(filepath.Join(uncoreDir, "package_00_die_00"), os.ModePerm)
 	}
 	die := 0
 	pkg := 0
-	strPkg := "00"
-	strDie := "00"
+	var strPkg, strDie string
 	pkgDir := "package_00_die_00/"
 	increment := diesPerPackage * packages
 	coresPerDie := cores / increment
@@ -557,7 +556,7 @@ func setupDummyFiles(cores int, packages int, diesPerPackage int, cpufiles map[s
 		cpudir := filepath.Join(path, cpuName)
 		os.MkdirAll(filepath.Join(cpudir, "cpufreq"), os.ModePerm)
 		os.MkdirAll(filepath.Join(cpudir, "topology"), os.ModePerm)
-		//used to divide cores between packages and dies
+		// used to divide cores between packages and dies
 		if i%coresPerDie == 0 && i != 0 && packages != 0 {
 			if die == diesPerPackage-1 && pkg != (packages-1) {
 				die = 0
@@ -580,42 +579,42 @@ func setupDummyFiles(cores int, packages int, diesPerPackage int, cpufiles map[s
 			os.MkdirAll(filepath.Join(uncoreDir, pkgDir), os.ModePerm)
 		}
 		if packages != 0 {
-			os.WriteFile(filepath.Join(cpudir, packageIdFile), []byte(fmt.Sprint(pkg)+"\n"), 0664)
-			os.WriteFile(filepath.Join(cpudir, dieIdFile), []byte(fmt.Sprint(die)+"\n"), 0664)
-			os.WriteFile(filepath.Join(cpudir, coreIdFile), []byte(fmt.Sprint(i)+"\n"), 0664)
+			os.WriteFile(filepath.Join(cpudir, packageIdFile), []byte(fmt.Sprint(pkg)+"\n"), 0o664)
+			os.WriteFile(filepath.Join(cpudir, dieIdFile), []byte(fmt.Sprint(die)+"\n"), 0o664)
+			os.WriteFile(filepath.Join(cpudir, coreIdFile), []byte(fmt.Sprint(i)+"\n"), 0o664)
 		}
 		for prop, value := range cpufiles {
 			switch prop {
 			case "driver":
-				os.WriteFile(filepath.Join(cpudir, pStatesDrvFile), []byte(value+"\n"), 0664)
+				os.WriteFile(filepath.Join(cpudir, pStatesDrvFile), []byte(value+"\n"), 0o664)
 			case "max":
-				os.WriteFile(filepath.Join(cpudir, scalingMaxFile), []byte(value+"\n"), 0644)
-				os.WriteFile(filepath.Join(cpudir, cpuMaxFreqFile), []byte(value+"\n"), 0644)
+				os.WriteFile(filepath.Join(cpudir, scalingMaxFile), []byte(value+"\n"), 0o644)
+				os.WriteFile(filepath.Join(cpudir, cpuMaxFreqFile), []byte(value+"\n"), 0o644)
 			case "min":
-				os.WriteFile(filepath.Join(cpudir, scalingMinFile), []byte(value+"\n"), 0644)
-				os.WriteFile(filepath.Join(cpudir, cpuMinFreqFile), []byte(value+"\n"), 0644)
+				os.WriteFile(filepath.Join(cpudir, scalingMinFile), []byte(value+"\n"), 0o644)
+				os.WriteFile(filepath.Join(cpudir, cpuMinFreqFile), []byte(value+"\n"), 0o644)
 			case "epp":
-				os.WriteFile(filepath.Join(cpudir, eppFile), []byte(value+"\n"), 0644)
+				os.WriteFile(filepath.Join(cpudir, eppFile), []byte(value+"\n"), 0o644)
 			case "governor":
-				os.WriteFile(filepath.Join(cpudir, scalingGovFile), []byte(value+"\n"), 0644)
+				os.WriteFile(filepath.Join(cpudir, scalingGovFile), []byte(value+"\n"), 0o644)
 			case "available_governors":
-				os.WriteFile(filepath.Join(cpudir, availGovFile), []byte(value+"\n"), 0644)
+				os.WriteFile(filepath.Join(cpudir, availGovFile), []byte(value+"\n"), 0o644)
 			case "uncore_max":
-				os.WriteFile(filepath.Join(uncoreDir, pkgDir, uncoreInitMaxFreqFile), []byte(value+"\n"), 0644)
-				os.WriteFile(filepath.Join(uncoreDir, pkgDir, uncoreMaxFreqFile), []byte(value+"\n"), 0644)
+				os.WriteFile(filepath.Join(uncoreDir, pkgDir, uncoreInitMaxFreqFile), []byte(value+"\n"), 0o644)
+				os.WriteFile(filepath.Join(uncoreDir, pkgDir, uncoreMaxFreqFile), []byte(value+"\n"), 0o644)
 			case "uncore_min":
-				os.WriteFile(filepath.Join(uncoreDir, pkgDir, uncoreInitMinFreqFile), []byte(value+"\n"), 0644)
-				os.WriteFile(filepath.Join(uncoreDir, pkgDir, uncoreMinFreqFile), []byte(value+"\n"), 0644)
+				os.WriteFile(filepath.Join(uncoreDir, pkgDir, uncoreInitMinFreqFile), []byte(value+"\n"), 0o644)
+				os.WriteFile(filepath.Join(uncoreDir, pkgDir, uncoreMinFreqFile), []byte(value+"\n"), 0o644)
 			case "cstates":
 				for i, stateInfo := range cstates {
 					statedir := "cpuidle/state" + fmt.Sprint(i)
 					os.MkdirAll(filepath.Join(cpudir, statedir), os.ModePerm)
 					os.MkdirAll(filepath.Join(path, "cpuidle"), os.ModePerm)
-					os.WriteFile(filepath.Join(path, "cpuidle", "current_driver"), []byte(value+"\n"), 0644)
-					os.WriteFile(filepath.Join(cpudir, statedir, "name"), []byte(stateInfo["name"]+"\n"), 0644)
-					os.WriteFile(filepath.Join(cpudir, statedir, "disable"), []byte("0\n"), 0644)
-					os.WriteFile(filepath.Join(cpudir, statedir, "latency"), []byte(stateInfo["latency"]+"\n"), 0644)
-					os.WriteFile(filepath.Join(cpudir, statedir, "default_status"), []byte(stateInfo["default_status"]+"\n"), 0644)
+					os.WriteFile(filepath.Join(path, "cpuidle", "current_driver"), []byte(value+"\n"), 0o644)
+					os.WriteFile(filepath.Join(cpudir, statedir, "name"), []byte(stateInfo["name"]+"\n"), 0o644)
+					os.WriteFile(filepath.Join(cpudir, statedir, "disable"), []byte("0\n"), 0o644)
+					os.WriteFile(filepath.Join(cpudir, statedir, "latency"), []byte(stateInfo["latency"]+"\n"), 0o644)
+					os.WriteFile(filepath.Join(cpudir, statedir, "default_status"), []byte(stateInfo["default_status"]+"\n"), 0o644)
 				}
 			}
 
@@ -653,11 +652,11 @@ type errClient struct {
 	mock.Mock
 }
 
-func (e *errClient) Get(ctx context.Context, NamespacedName types.NamespacedName, obj client.Object, opts ...client.GetOption) error {
+func (e *errClient) Get(ctx context.Context, namespacedName types.NamespacedName, obj client.Object, opts ...client.GetOption) error {
 	if len(opts) != 0 {
-		return e.Called(ctx, NamespacedName, obj, opts).Error(0)
+		return e.Called(ctx, namespacedName, obj, opts).Error(0)
 	}
-	return e.Called(ctx, NamespacedName, obj).Error(0)
+	return e.Called(ctx, namespacedName, obj).Error(0)
 }
 func (e *errClient) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
 	if len(opts) != 0 {

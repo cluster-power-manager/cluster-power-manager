@@ -45,28 +45,28 @@ func setupScalingTestFiles(cores int, cpufiles map[string]string) (power.Host, f
 		for prop, value := range fileMap {
 			switch prop {
 			case "driver":
-				os.WriteFile(filepath.Join(cpudir, pStatesDrvFile), []byte(value+"\n"), 0644)
+				os.WriteFile(filepath.Join(cpudir, pStatesDrvFile), []byte(value+"\n"), 0o644)
 			case "governor":
-				os.WriteFile(filepath.Join(cpudir, scalingGovFile), []byte(value+"\n"), 0644)
+				os.WriteFile(filepath.Join(cpudir, scalingGovFile), []byte(value+"\n"), 0o644)
 			case "setspeed":
-				os.WriteFile(filepath.Join(cpudir, scalingSetSpeedFile), []byte(value+"\n"), 0644)
+				os.WriteFile(filepath.Join(cpudir, scalingSetSpeedFile), []byte(value+"\n"), 0o644)
 			case "current":
-				os.WriteFile(filepath.Join(cpudir, scalingCurFreqFile), []byte(value+"\n"), 0644)
+				os.WriteFile(filepath.Join(cpudir, scalingCurFreqFile), []byte(value+"\n"), 0o644)
 			case "max":
-				os.WriteFile(filepath.Join(cpudir, scalingMaxFile), []byte(value+"\n"), 0644)
-				os.WriteFile(filepath.Join(cpudir, cpuMaxFreqFile), []byte(value+"\n"), 0644)
+				os.WriteFile(filepath.Join(cpudir, scalingMaxFile), []byte(value+"\n"), 0o644)
+				os.WriteFile(filepath.Join(cpudir, cpuMaxFreqFile), []byte(value+"\n"), 0o644)
 			case "min":
-				os.WriteFile(filepath.Join(cpudir, scalingMinFile), []byte(value+"\n"), 0644)
-				os.WriteFile(filepath.Join(cpudir, cpuMinFreqFile), []byte(value+"\n"), 0644)
+				os.WriteFile(filepath.Join(cpudir, scalingMinFile), []byte(value+"\n"), 0o644)
+				os.WriteFile(filepath.Join(cpudir, cpuMinFreqFile), []byte(value+"\n"), 0o644)
 			case "available_governors":
-				os.WriteFile(filepath.Join(cpudir, availGovFile), []byte(value+"\n"), 0644)
+				os.WriteFile(filepath.Join(cpudir, availGovFile), []byte(value+"\n"), 0o644)
 			}
 		}
 
 		// Minimal topology info
-		os.WriteFile(filepath.Join(cpudir, "topology", "physical_package_id"), []byte("0\n"), 0664)
-		os.WriteFile(filepath.Join(cpudir, "topology", "die_id"), []byte("0\n"), 0664)
-		os.WriteFile(filepath.Join(cpudir, "topology", "core_id"), []byte(fmt.Sprint(i)+"\n"), 0664)
+		os.WriteFile(filepath.Join(cpudir, "topology", "physical_package_id"), []byte("0\n"), 0o664)
+		os.WriteFile(filepath.Join(cpudir, "topology", "die_id"), []byte("0\n"), 0o664)
+		os.WriteFile(filepath.Join(cpudir, "topology", "core_id"), []byte(fmt.Sprint(i)+"\n"), 0o664)
 	}
 
 	// Create power library instance with custom CPU path

@@ -274,7 +274,9 @@ func TestPowerNodeConfigConflictDetection(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			objs := append(tc.existing, tc.nodes...)
+			objs := make([]client.Object, 0, len(tc.existing)+len(tc.nodes))
+			objs = append(objs, tc.existing...)
+			objs = append(objs, tc.nodes...)
 			v := &powerNodeConfigValidator{Client: newFakeClient(objs...)}
 			errs := v.validateNodeSelectorConflicts(context.TODO(), tc.config)
 			if tc.wantErr {

@@ -18,11 +18,13 @@ package util
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/klog/v2"
 	"net"
 	"net/url"
+
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/klog/v2"
 )
 
 const (
@@ -116,14 +118,14 @@ func UnpackErrsToStrings(err error) *[]string {
 		return &[]string{}
 	}
 
-	switch joinedErr := err.(type) {
-	case interface{ Unwrap() []error }:
-		stringErrs := make([]string, len(joinedErr.Unwrap()))
-		for i, individualErr := range joinedErr.Unwrap() {
+	var joinedErr interface{ Unwrap() []error }
+	if errors.As(err, &joinedErr) {
+		errs := joinedErr.Unwrap()
+		stringErrs := make([]string, len(errs))
+		for i, individualErr := range errs {
 			stringErrs[i] = individualErr.Error()
 		}
 		return &stringErrs
-	default:
-		return &[]string{err.Error()}
 	}
+	return &[]string{err.Error()}
 }

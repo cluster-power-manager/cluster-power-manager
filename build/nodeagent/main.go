@@ -121,6 +121,8 @@ func main() {
 	cpuScalingMgr := scaling.NewCPUScalingManager(&powerLibrary, dpdkClient)
 	if err = mgr.Add(cpuScalingMgr); err != nil {
 		setupLog.Error(err, "unable to register runnable", "runnable", "CPUScalingManager")
+		//nolint:gocritic // exitAfterDefer: os.Exit calls before mgr.Start() here are during setup/registration, no DPDK connections exist yet,
+		// so skipping the defer of DPDK connections cleanup is safe. The defer is needed for graceful shutdown when mgr.Start() returns.
 		os.Exit(1)
 	}
 

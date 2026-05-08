@@ -353,7 +353,7 @@ func (r *PowerPodReconciler) getPowerProfileRequestsFromContainers(ctx context.C
 		cleanCoreList := getCleanCoreList(coreIDs)
 		logger.V(5).Info("reserving cores to container.", "ContainerID", containerID, "Cores", cleanCoreList)
 
-		// Accounts for case where cores aquired through DRA don't match profile requests.
+		// Accounts for case where cores acquired through DRA don't match profile requests.
 		if len(cleanCoreList) != requestNum {
 			recoverableErrs = append(recoverableErrs, fmt.Errorf("assigned cores did not match requested profiles. cores:%d, profiles %d", len(cleanCoreList), requestNum))
 			continue
@@ -420,11 +420,18 @@ func checkResource(container corev1.Container, resource corev1.ResourceName, num
 	return numRequestsCPU, numLimitsCPU
 }
 
+func allPodContainers(pod *corev1.Pod) []corev1.Container {
+	containers := make([]corev1.Container, 0, len(pod.Spec.InitContainers)+len(pod.Spec.Containers))
+	containers = append(containers, pod.Spec.InitContainers...)
+	containers = append(containers, pod.Spec.Containers...)
+	return containers
+}
+
 func getAdmissibleContainers(pod *corev1.Pod, resourceClient podresourcesclient.PodResourcesClient, logger *logr.Logger) []corev1.Container {
 
 	logger.V(5).Info("receiving containers requesting exclusive CPUs")
 	admissibleContainers := make([]corev1.Container, 0)
-	containerList := append(pod.Spec.InitContainers, pod.Spec.Containers...)
+	containerList := allPodContainers(pod)
 	controlPlaneAvailable := pingControlPlane(resourceClient)
 	for _, container := range containerList {
 		if doesContainerRequireExclusiveCPUs(pod, &container, logger) || controlPlaneAvailable {
@@ -465,7 +472,10 @@ func pingControlPlane(client podresourcesclient.PodResourcesClient) bool {
 }
 
 func getContainerID(pod *corev1.Pod, containerName string) string {
-	for _, containerStatus := range append(pod.Status.InitContainerStatuses, pod.Status.ContainerStatuses...) {
+	statuses := make([]corev1.ContainerStatus, 0, len(pod.Status.InitContainerStatuses)+len(pod.Status.ContainerStatuses))
+	statuses = append(statuses, pod.Status.InitContainerStatuses...)
+	statuses = append(statuses, pod.Status.ContainerStatuses...)
+	for _, containerStatus := range statuses {
 		if containerStatus.Name == containerName {
 			return containerStatus.ContainerID
 		}
@@ -516,8 +526,7 @@ func PowerReleventPodPredicate(obj client.Object) bool {
 	if pod.Spec.NodeName != os.Getenv("NODE_NAME") {
 		return false
 	}
-	containers := append(pod.Spec.InitContainers, pod.Spec.Containers...)
-	for _, c := range containers {
+	for _, c := range allPodContainers(pod) {
 		// No need to check the limits, as if the requests are present,
 		// the limits must be present as well.
 		for rn := range c.Resources.Requests {
@@ -536,8 +545,8 @@ func PowerReleventPodPredicate(obj client.Object) bool {
 func (r *PowerPodReconciler) applyPowerNodeStateExclusiveStatus(ctx context.Context, powerNodeStateName string, exclusive []powerv1alpha1.ExclusiveCPUPoolStatus, fieldManager string) error {
 	patchNodeState := &powerv1alpha1.PowerNodeState{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "power.cluster-power-manager.github.io/v1alpha1",
-			Kind:       "PowerNodeState",
+			APIVersion: powerv1alpha1.GroupVersion.String(),
+			Kind:       PowerNodeStateKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      powerNodeStateName,
@@ -722,8 +731,7 @@ func (r *PowerPodReconciler) powerProfileToPodRequests(ctx context.Context, obj 
 
 	profileName := obj.GetName()
 	for _, pod := range podList.Items {
-		containers := append(pod.Spec.InitContainers, pod.Spec.Containers...)
-		for _, c := range containers {
+		for _, c := range allPodContainers(&pod) {
 			for rn := range c.Resources.Requests {
 				if string(rn) == ResourcePrefix+profileName {
 					requests = append(requests, reconcile.Request{

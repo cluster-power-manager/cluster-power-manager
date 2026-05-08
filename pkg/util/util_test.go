@@ -365,14 +365,14 @@ func TestUnpackErrsToStrings(t *testing.T) {
 
 	// single error
 	const errString1 = "err1"
-	assert.Equal(t, UnpackErrsToStrings(fmt.Errorf(errString1)), &[]string{errString1})
+	assert.Equal(t, &[]string{errString1}, UnpackErrsToStrings(errors.New(errString1)))
 
 	// wrapped err
 	const errString2 = "err2"
 	assert.Equal(
 		t,
-		UnpackErrsToStrings(errors.Join(fmt.Errorf(errString1), fmt.Errorf(errString2))),
 		&[]string{errString1, errString2},
+		UnpackErrsToStrings(errors.Join(errors.New(errString1), errors.New(errString2))),
 	)
 
 }
