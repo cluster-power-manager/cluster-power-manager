@@ -245,7 +245,6 @@ manifests: controller-gen
 ifeq (false, $(OCP))
 	sed -i 's|- .*\/rbac\.yaml|- \.\/rbac.yaml|' config/rbac/kustomization.yaml
 	sed -i 's|- .*\/role\.yaml|- \.\/role.yaml|' config/rbac/kustomization.yaml
-	sed -i 's|- \.\./manager/ocp$$|- ../manager|' config/default/kustomization.yaml
 	sed -i '\|- \.\./certmanager$$|d' config/default/kustomization.yaml
 	sed -i '\|- \.\./webhook$$|a\- ../certmanager' config/default/kustomization.yaml
 	sed -i 's|- path: ocp/webhookcainjection_patch\.yaml$$|- path: webhookcainjection_patch.yaml|' config/default/kustomization.yaml
@@ -254,7 +253,6 @@ ifeq (false, $(OCP))
 else
 	sed -i 's|- .*\/rbac\.yaml|- \.\/ocp\/rbac.yaml|' config/rbac/kustomization.yaml
 	sed -i 's|- .*\/role\.yaml|- \.\/ocp\/role.yaml|' config/rbac/kustomization.yaml
-	sed -i 's|- \.\./manager$$|- ../manager/ocp|' config/default/kustomization.yaml
 	sed -i '\|- \.\./certmanager$$|d' config/default/kustomization.yaml
 	sed -i 's|- path: webhookcainjection_patch\.yaml$$|- path: ocp/webhookcainjection_patch.yaml|' config/default/kustomization.yaml
 	sed -i '\|- path: certmanager_replacements\.yaml$$|d' config/default/kustomization.yaml
@@ -498,11 +496,7 @@ gofmt:
 
 update:
 	sed -i 's|image: .*|image: $(IMG_AGENT)|' build/manifests/power-node-agent-ds.yaml
-ifeq (false, $(OCP))
 	sed -i 's|image: .*|image: $(IMG)|' config/manager/manager.yaml
-else
-	sed -i 's|image: .*|image: $(IMG)|' config/manager/ocp/manager.yaml
-endif
 
 # markdownlint rules, following: https://github.com/openshift/enhancements/blob/master/Makefile
 .PHONY: markdownlint-image
