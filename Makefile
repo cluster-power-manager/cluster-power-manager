@@ -293,7 +293,7 @@ build-agent-ocp:
 .PHONY: build-push-multiarch
 # Build and push multi-architecture images for both operator and agent
 # Set OCP=true for OpenShift builds (default: false)
-build-push-multiarch: generate manifests
+build-push-multiarch: update generate manifests
 ifeq (true, $(OCP))
 	@echo "Building and pushing multi-arch OCP images for platforms: $(PLATFORMS)"
 else

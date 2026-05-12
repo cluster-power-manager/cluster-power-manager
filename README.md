@@ -221,38 +221,24 @@ The Cluster Power Manager supports all of the above use cases.
 ## Building Images
 
 The Cluster Power Manager requires two container images: the **Power Operator** (manager) and the **Power Node Agent**.
-
-When building with custom image tags (different from the defaults), run `make update` first to update the image
-references in the deployment manifests. This ensures the operator deploys the node agent DaemonSet with the
-correct image.
-
-```console
-IMG=quay.io/<user/org>/power-operator:<tag> \
-IMG_AGENT=quay.io/<user/org>/power-node-agent:<tag> \
-make update
-
-# OpenShift
-OCP=true \
-IMG=quay.io/<user/org>/power-operator:<tag> \
-IMG_AGENT=quay.io/<user/org>/power-node-agent:<tag> \
-make update
-```
+Image references in the deployment manifests are automatically updated when building images via `make update`,
+which runs as a prerequisite of all image build targets.
 
 ### Building Single-Architecture Images
 
 Build both images for a single platform. `IMGTOOL` defaults to `docker` and `PLATFORM` defaults to `linux/amd64`.
 
 ```console
-IMG=quay.io/<user/org>/power-operator:<tag> \
-IMG_AGENT=quay.io/<user/org>/power-node-agent:<tag> \
+IMAGE_REGISTRY=ghcr.io/<user/org> \
+VERSION=<tag> \
 IMGTOOL=<docker|podman> \
 PLATFORM=<linux/amd64|linux/arm64> \
 make build-push-images
 
-# For OpenShift (uses UBI base image and OCP-specific manifests):
+# For OpenShift (uses UBI base image):
 OCP=true \
-IMG=quay.io/<user/org>/power-operator:<tag> \
-IMG_AGENT=quay.io/<user/org>/power-node-agent:<tag> \
+IMAGE_REGISTRY=ghcr.io/<user/org> \
+VERSION=<tag> \
 IMGTOOL=<docker|podman> \
 PLATFORM=<linux/amd64|linux/arm64> \
 make build-push-images-ocp
@@ -302,13 +288,13 @@ Build both operator and agent images for multiple architectures (default: linux/
 ```console
 # Using Podman
 IMGTOOL=podman \
-IMAGE_REGISTRY=quay.io/<user/org> \
+IMAGE_REGISTRY=ghcr.io/<user/org> \
 VERSION=latest \
 make build-push-multiarch
 
 # Using Docker
 IMGTOOL=docker \
-IMAGE_REGISTRY=quay.io/<user/org> \
+IMAGE_REGISTRY=ghcr.io/<user/org> \
 VERSION=latest \
 make build-push-multiarch
 ```
@@ -318,7 +304,7 @@ For OpenShift (uses UBI base image and OCP-specific manifests):
 ```console
 OCP=true \
 IMGTOOL=podman \
-IMAGE_REGISTRY=quay.io/<user/org> \
+IMAGE_REGISTRY=ghcr.io/<user/org> \
 VERSION=latest \
 make build-push-multiarch
 ```
@@ -330,7 +316,7 @@ Override the default platforms (linux/amd64,linux/arm64):
 ```console
 PLATFORMS=linux/amd64,linux/arm64,linux/arm/v7 \
 IMGTOOL=podman \
-IMAGE_REGISTRY=quay.io/<user/org> \
+IMAGE_REGISTRY=ghcr.io/<user/org> \
 VERSION=latest \
 make build-push-multiarch
 ```
@@ -352,8 +338,8 @@ docker buildx imagetools inspect ghcr.io/<user/org>/cluster-power-manager-operat
 Install the CRDs and deploy the operator:
 
 ```console
-IMG=quay.io/<user/org>/power-operator:<tag> \
-IMG_AGENT=quay.io/<user/org>/power-node-agent:<tag> \
+IMAGE_REGISTRY=ghcr.io/<user/org> \
+VERSION=<tag> \
 make install deploy
 ```
 
@@ -361,8 +347,8 @@ For OpenShift:
 
 ```console
 OCP=true \
-IMG=quay.io/<user/org>/power-operator:<tag> \
-IMG_AGENT=quay.io/<user/org>/power-node-agent:<tag> \
+IMAGE_REGISTRY=ghcr.io/<user/org> \
+VERSION=<tag> \
 make install deploy
 ```
 
@@ -411,10 +397,10 @@ is generated on demand by `make bundle`. All OLM-related Makefile targets requir
 
 ### Building and deploying via OLM bundle
 
-1. **Update image references, build and push operator and agent images:**
+1. **Build and push operator and agent images:**
 
     ```console
-    OCP=true IMAGE_REGISTRY=ghcr.io/<user> VERSION=<tag> IMGTOOL=<docker|podman> make update build-push-images-ocp
+    OCP=true IMAGE_REGISTRY=ghcr.io/<user> VERSION=<tag> IMGTOOL=<docker|podman> make build-push-images-ocp
     ```
 
 2. **Generate the OLM bundle:**
