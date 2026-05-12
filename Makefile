@@ -1,9 +1,9 @@
 export PROJECT_NAME=cluster-power-manager
 CPM_NAMESPACE ?= power-manager
-# Current Operator version
-VERSION ?= 0.0.1
-# Bundle version (without 'v' prefix for operator-sdk)
-BUNDLE_VERSION := $(shell echo $(VERSION) | sed 's/^v//')
+# Image tag version
+VERSION ?= latest
+# OLM bundle version (semver, without 'v' prefix)
+BUNDLE_VERSION ?= 0.0.1
 # parameter used for helm chart image
 HELM_CHART ?= v2.5.0
 HELM_VERSION := $(shell echo $(HELM_CHART) | cut -d "v" -f2)
@@ -27,11 +27,10 @@ ENVTEST_VERSION ?= release-0.21
 # used to detemine if certain targets should build for openshift
 OCP ?= false
 
-IMAGE_REGISTRY ?= quay.io/openshift-kni
+IMAGE_REGISTRY ?= ghcr.io/cluster-power-manager
 
-# TODO: rename to $(PROJECT_NAME)-operator and $(PROJECT_NAME)-node-agent once the release strategy is decided
-IMAGE_NAME ?= kubernetes-power-manager-operator
-IMAGE_NAME_AGENT ?= kubernetes-power-node-agent
+IMAGE_NAME ?= cluster-power-manager-operator
+IMAGE_NAME_AGENT ?= cluster-power-node-agent
 IMAGE_TAG_BASE ?= $(IMAGE_REGISTRY)/$(IMAGE_NAME)
 IMAGE_TAG_BASE_AGENT ?= $(IMAGE_REGISTRY)/$(IMAGE_NAME_AGENT)
 
@@ -176,13 +175,13 @@ verify-build: gofmt test race coverage tidy clean verify-test
 	CGO_ENABLED=0 GOOS=linux GOARCH=$(GOARCH) GO111MODULE=on go build -a -o build/bin/nodeagent build/nodeagent/main.go	
 
 # Build the Manager and Node Agent images
-images: generate manifests
+images: update generate manifests
 	 $(IMGTOOL) build -f build/Dockerfile --platform $(PLATFORM) -t ${IMG} .
 	 $(IMGTOOL) build -f build/Dockerfile.nodeagent --platform $(PLATFORM) -t ${IMG_AGENT} .
 
-images-ocp: generate manifests
+images-ocp: update generate manifests
 	 echo "Building images for OCP $(IMG) and $(IMG_AGENT)"
-	 $(IMGTOOL) build --build-arg="BASE_IMAGE=$(OCP_IMAGE)" --build-arg="MANIFEST=build/manifests/ocp/power-node-agent-ds.yaml" -f build/Dockerfile --platform $(PLATFORM) -t ${IMG} .
+	 $(IMGTOOL) build --build-arg="BASE_IMAGE=$(OCP_IMAGE)" -f build/Dockerfile --platform $(PLATFORM) -t ${IMG} .
 	 $(IMGTOOL) build --build-arg="BASE_IMAGE=$(OCP_IMAGE)" -f build/Dockerfile.nodeagent --platform $(PLATFORM) -t ${IMG_AGENT} .
 
 # Build and push single-architecture images
@@ -213,7 +212,7 @@ endif
 	sed -i 's/^appVersion:.*$$/appVersion: \"$(HELM_CHART)\"/' helm/crds/Chart.yaml 
 	helm install cluster-power-manager-crds ./helm/crds
 	helm dependency update ./helm/cluster-power-manager
-	helm install cluster-power-manager-$(HELM_CHART) ./helm/cluster-power-manager --set operator.container.image=$(IMAGE_REGISTRY)/kubernetes-power-manager-operator:$(VERSION) $(HELM_FLAG)
+	helm install cluster-power-manager-$(HELM_CHART) ./helm/cluster-power-manager --set operator.container.image=$(IMAGE_REGISTRY)/$(IMAGE_NAME):$(VERSION) $(HELM_FLAG)
 
 helm-uninstall:
 	sed -i 's/^version:.*$$/version: $(HELM_VERSION)/' helm/cluster-power-manager/Chart.yaml 
@@ -246,7 +245,6 @@ manifests: controller-gen
 ifeq (false, $(OCP))
 	sed -i 's|- .*\/rbac\.yaml|- \.\/rbac.yaml|' config/rbac/kustomization.yaml
 	sed -i 's|- .*\/role\.yaml|- \.\/role.yaml|' config/rbac/kustomization.yaml
-	sed -i 's|- \.\./manager/ocp$$|- ../manager|' config/default/kustomization.yaml
 	sed -i '\|- \.\./certmanager$$|d' config/default/kustomization.yaml
 	sed -i '\|- \.\./webhook$$|a\- ../certmanager' config/default/kustomization.yaml
 	sed -i 's|- path: ocp/webhookcainjection_patch\.yaml$$|- path: webhookcainjection_patch.yaml|' config/default/kustomization.yaml
@@ -255,7 +253,6 @@ ifeq (false, $(OCP))
 else
 	sed -i 's|- .*\/rbac\.yaml|- \.\/ocp\/rbac.yaml|' config/rbac/kustomization.yaml
 	sed -i 's|- .*\/role\.yaml|- \.\/ocp\/role.yaml|' config/rbac/kustomization.yaml
-	sed -i 's|- \.\./manager$$|- ../manager/ocp|' config/default/kustomization.yaml
 	sed -i '\|- \.\./certmanager$$|d' config/default/kustomization.yaml
 	sed -i 's|- path: webhookcainjection_patch\.yaml$$|- path: ocp/webhookcainjection_patch.yaml|' config/default/kustomization.yaml
 	sed -i '\|- path: certmanager_replacements\.yaml$$|d' config/default/kustomization.yaml
@@ -296,7 +293,7 @@ build-agent-ocp:
 .PHONY: build-push-multiarch
 # Build and push multi-architecture images for both operator and agent
 # Set OCP=true for OpenShift builds (default: false)
-build-push-multiarch: generate manifests
+build-push-multiarch: update generate manifests
 ifeq (true, $(OCP))
 	@echo "Building and pushing multi-arch OCP images for platforms: $(PLATFORMS)"
 else
@@ -310,7 +307,7 @@ ifeq (true, $(OCP))
 	@for platform in $$(echo $(PLATFORMS) | tr ',' ' '); do \
 		arch=$$(echo $$platform | cut -d'/' -f2); \
 		echo "Building OCP operator for $$platform..."; \
-		$(IMGTOOL) build --build-arg="BASE_IMAGE=$(OCP_IMAGE)" --build-arg="MANIFEST=build/manifests/ocp/power-node-agent-ds.yaml" -f build/Dockerfile --platform $$platform -t ${IMG}-$$arch .; \
+		$(IMGTOOL) build --build-arg="BASE_IMAGE=$(OCP_IMAGE)" -f build/Dockerfile --platform $$platform -t ${IMG}-$$arch .; \
 		echo "Building OCP agent for $$platform..."; \
 		$(IMGTOOL) build --build-arg="BASE_IMAGE=$(OCP_IMAGE)" -f build/Dockerfile.nodeagent --platform $$platform -t ${IMG_AGENT}-$$arch .; \
 	done
@@ -359,7 +356,7 @@ else
 	# Docker: use buildx for multi-platform builds and push directly
 ifeq (true, $(OCP))
 	@echo "Using docker buildx for multi-platform OCP builds..."
-	$(IMGTOOL) buildx build --build-arg="BASE_IMAGE=$(OCP_IMAGE)" --build-arg="MANIFEST=build/manifests/ocp/power-node-agent-ds.yaml" -f build/Dockerfile --platform $(PLATFORMS) -t ${IMG} --push .
+	$(IMGTOOL) buildx build --build-arg="BASE_IMAGE=$(OCP_IMAGE)" -f build/Dockerfile --platform $(PLATFORMS) -t ${IMG} --push .
 	$(IMGTOOL) buildx build --build-arg="BASE_IMAGE=$(OCP_IMAGE)" -f build/Dockerfile.nodeagent --platform $(PLATFORMS) -t ${IMG_AGENT} --push .
 else
 	@echo "Using docker buildx for multi-platform builds..."
@@ -378,7 +375,7 @@ bundle: update manifests kustomize operator-sdk
 # directory used to get image name for bundle
 	$(OPERATOR_SDK) generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle -q --use-image-digests --overwrite --version $(BUNDLE_VERSION) $(BUNDLE_METADATA_OPTS)
+	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle -q --overwrite --version $(BUNDLE_VERSION) $(BUNDLE_METADATA_OPTS)
 	$(OPERATOR_SDK) bundle validate ./bundle
 else
 bundle:
@@ -388,7 +385,7 @@ endif
 # Build the bundle image.
 ifeq (true, $(OCP))
 bundle-build:
-	$(IMGTOOL) build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+	$(IMGTOOL) build -f bundle.Dockerfile --platform $(PLATFORM) -t $(BUNDLE_IMG) .
 else
 bundle-build:
 	$(error OLM bundle targets require OCP=true)
@@ -498,13 +495,8 @@ gofmt:
 	gofmt -w .
 
 update:
-ifeq (false, $(OCP))
-	sed -i 's|image: .*|image: $(IMG)|' config/manager/manager.yaml
 	sed -i 's|image: .*|image: $(IMG_AGENT)|' build/manifests/power-node-agent-ds.yaml
-else
-	sed -i 's|image: .*|image: $(IMG)|' config/manager/ocp/manager.yaml
-	sed -i 's|image: .*|image: $(IMG_AGENT)|' build/manifests/ocp/power-node-agent-ds.yaml
-endif
+	sed -i 's|image: .*|image: $(IMG)|' config/manager/manager.yaml
 
 # markdownlint rules, following: https://github.com/openshift/enhancements/blob/master/Makefile
 .PHONY: markdownlint-image
