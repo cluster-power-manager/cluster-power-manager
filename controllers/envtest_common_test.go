@@ -130,8 +130,8 @@ func applyNodeInfo(t *testing.T, cl client.Client, pnsName string) {
 	t.Helper()
 	patchNodeState := &powerv1alpha1.PowerNodeState{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "power.cluster-power-manager.github.io/v1alpha1",
-			Kind:       "PowerNodeState",
+			APIVersion: powerv1alpha1.GroupVersion.String(),
+			Kind:       PowerNodeStateKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      pnsName,

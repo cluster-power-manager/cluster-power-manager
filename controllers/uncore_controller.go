@@ -300,8 +300,8 @@ func (r *UncoreReconciler) updateUncoreInPowerNodeState(
 
 	patchNodeState := &powerv1alpha1.PowerNodeState{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "power.cluster-power-manager.github.io/v1alpha1",
-			Kind:       "PowerNodeState",
+			APIVersion: powerv1alpha1.GroupVersion.String(),
+			Kind:       PowerNodeStateKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      powerNodeStateName,
@@ -336,8 +336,8 @@ func (r *UncoreReconciler) removeUncoreFromPowerNodeState(ctx context.Context, n
 
 	patchNodeState := &powerv1alpha1.PowerNodeState{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "power.cluster-power-manager.github.io/v1alpha1",
-			Kind:       "PowerNodeState",
+			APIVersion: powerv1alpha1.GroupVersion.String(),
+			Kind:       PowerNodeStateKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      powerNodeStateName,

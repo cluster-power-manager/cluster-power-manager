@@ -231,7 +231,7 @@ func (r *PowerProfileReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		msg := fmt.Sprintf("updating the power profile '%s' to the power library for node '%s'", profile.Name, nodeName)
 		logger.V(5).Info(msg)
 		if err != nil {
-			return ctrl.Result{}, fmt.Errorf("error %s: %v", msg, err)
+			return ctrl.Result{}, fmt.Errorf("error %s: %w", msg, err)
 		}
 
 		// Update shared pool if it uses this profile
@@ -241,7 +241,7 @@ func (r *PowerProfileReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			logger.V(5).Info(msg)
 			err := sharedPool.SetPowerProfile(powerProfile)
 			if err != nil {
-				return ctrl.Result{}, fmt.Errorf("error %s: %v", msg, err)
+				return ctrl.Result{}, fmt.Errorf("error %s: %w", msg, err)
 			}
 		}
 
@@ -255,7 +255,7 @@ func (r *PowerProfileReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				logger.V(5).Info(msg)
 				err := pool.SetPowerProfile(powerProfile)
 				if err != nil {
-					return ctrl.Result{}, fmt.Errorf("error %s: %v", msg, err)
+					return ctrl.Result{}, fmt.Errorf("error %s: %w", msg, err)
 				}
 			}
 		}
@@ -273,7 +273,7 @@ func (r *PowerProfileReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// Create or update the extended resources for the profile.
 	err = r.ensureExtendedResources(ctx, nodeName, profile, &logger)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("error creating or updating the extended resources for the base profile: %v", err)
+		return ctrl.Result{}, fmt.Errorf("error creating or updating the extended resources for the base profile: %w", err)
 	}
 
 	// If the workload already exists then the power profile was just updated and the power library will take care of reconfiguring cores

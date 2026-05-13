@@ -58,17 +58,17 @@ func newClient(socket string) (*PodResourcesClient, error) {
 func getV1Client(socket string, connectionTimeout time.Duration, maxMsgSize int) (podresourcesapi.PodResourcesListerClient, *grpc.ClientConn, error) {
 	addr, dialer, err := util.GetAddressAndDialer(socket)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error getting address and dialer for socket %s: %v", socket, err)
+		return nil, nil, fmt.Errorf("error getting address and dialer for socket %s: %w", socket, err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), connectionTimeout)
 	defer cancel()
 
-	conn, err := grpc.DialContext(ctx, addr,
+	conn, err := grpc.DialContext(ctx, addr, //nolint:staticcheck // SA1019: TODO: migrate to grpc.NewClient changes connection semantics
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(dialer),
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxMsgSize)))
 	if err != nil {
-		return nil, nil, fmt.Errorf("error dialing socket %s: %v", socket, err)
+		return nil, nil, fmt.Errorf("error dialing socket %s: %w", socket, err)
 	}
 	return podresourcesapi.NewPodResourcesListerClient(conn), conn, nil
 }
@@ -88,7 +88,7 @@ func (p *PodResourcesClient) listResources(controlPlaneClient bool) (*podresourc
 	// only default client errs are logged as controlplane socket isn't guaranteed to be there
 	// otherwise we'd be spamming the logs in static cpu policy deployments
 	if err != nil && clientType == "default" {
-		return nil, fmt.Errorf("can't receive response from %s client: %v", clientType, err)
+		return nil, fmt.Errorf("can't receive response from %s client: %w", clientType, err)
 	}
 	return resp, nil
 }

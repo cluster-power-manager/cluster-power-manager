@@ -574,8 +574,7 @@ func TestConfigureReservedPools(t *testing.T) {
 			hostMk := tc.setupMock()
 			config := newPowerNodeConfig("c", "p", nil, tc.reserved, time.Now())
 			r := &PowerNodeConfigReconciler{PowerLibrary: hostMk}
-			logger := testLogger()
-			cpus, errs := r.configureReservedPools(config, "test-node", &logger)
+			cpus, errs := r.configureReservedPools(config, "test-node")
 			assert.Len(t, cpus, tc.expectedCPUCount)
 			assert.Len(t, errs, tc.expectedErrCount)
 		})

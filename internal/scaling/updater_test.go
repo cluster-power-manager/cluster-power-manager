@@ -313,9 +313,9 @@ func TestCPUScalingUpdater_Update(t *testing.T) {
 			setFreqpath := filepath.Join("testing", "cpus", fmt.Sprintf("cpu%d", tc.cpuID), "cpufreq", "scaling_setspeed")
 
 			// Set current frequency and clear setspeed file
-			err = os.WriteFile(curFreqPath, []byte(tc.currentFreq+"\n"), 0644)
+			err = os.WriteFile(curFreqPath, []byte(tc.currentFreq+"\n"), 0o644)
 			assert.NoError(t, err)
-			err = os.WriteFile(setFreqpath, []byte(""), 0644)
+			err = os.WriteFile(setFreqpath, []byte(""), 0o644)
 			assert.NoError(t, err)
 
 			dpdkmock := &MockDPDKTelemetryClient{}

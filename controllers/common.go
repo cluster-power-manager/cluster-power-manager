@@ -11,6 +11,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package controllers
 
 import (
@@ -34,10 +35,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const queuetime = time.Second * 5
-
-// FieldOwnerPowerProfileController is the base field manager name for PowerProfile controller.
-const FieldOwnerPowerProfileController = "powerprofile-controller"
+const (
+	queuetime          = time.Second * 5
+	PowerNodeStateKind = "PowerNodeState"
+	// FieldOwnerPowerProfileController is the base field manager name for PowerProfile controller.
+	FieldOwnerPowerProfileController = "powerprofile-controller"
+)
 
 // powerProfileFieldManager returns the field manager name for a specific PowerProfile.
 // Using per-profile field managers enables SSA to track ownership at the element level
@@ -239,8 +242,8 @@ func formatCpuScalingPolicy(policy *powerv1alpha1.CpuScalingPolicy) (string, err
 func applyPowerNodeStateProfilesStatus(ctx context.Context, c client.Client, powerNodeStateName string, profiles []powerv1alpha1.PowerNodeProfileStatus, fieldManager string) error {
 	patchNodeState := &powerv1alpha1.PowerNodeState{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "power.cluster-power-manager.github.io/v1alpha1",
-			Kind:       "PowerNodeState",
+			APIVersion: powerv1alpha1.GroupVersion.String(),
+			Kind:       PowerNodeStateKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      powerNodeStateName,

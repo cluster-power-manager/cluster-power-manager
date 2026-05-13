@@ -3,10 +3,11 @@ package podresourcesclient
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 	podresourcesapi "k8s.io/kubelet/pkg/apis/podresources/v1"
-	"testing"
 )
 
 type fakePodResourcesClient struct {
