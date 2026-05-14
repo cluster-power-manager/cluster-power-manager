@@ -3,10 +3,8 @@ package podresourcesclient
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/cluster-power-manager/cluster-power-manager/pkg/cpuset"
-	"github.com/cluster-power-manager/cluster-power-manager/pkg/util"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -17,7 +15,6 @@ var maxMessage = 1024 * 1024 * 4 // size in bytes => 4MB
 var socket = "unix:///var/lib/kubelet/pod-resources/kubelet.sock"
 var cPlaneSocket = "unix:///var/lib/kubelet/pod-resources/cci-dra-driver-podrsc.sock"
 var cPlaneRetries = 3
-var timeout = 2 * time.Minute
 
 // PodResourcesClient stores a client to the Kubelet PodResources API server
 type PodResourcesClient struct {
@@ -46,29 +43,20 @@ func NewDualSocketPodClient() (*PodResourcesClient, error) {
 }
 
 func newClient(socket string) (*PodResourcesClient, error) {
-	client, _, err := getV1Client(socket, timeout, maxMessage)
+	client, _, err := getV1Client(socket, maxMessage)
 	if err != nil {
 		return nil, errors.NewServiceUnavailable(fmt.Sprintf("failed to create podresources client: %v", err))
 	}
 	return &PodResourcesClient{Client: client}, nil
 }
 
-// GetV1Client returns a client for the PodResourcesLister grpc service
-// https://github.com/kubernetes/kubernetes/blob/master/pkg/kubelet/apis/podresources/client.go
-func getV1Client(socket string, connectionTimeout time.Duration, maxMsgSize int) (podresourcesapi.PodResourcesListerClient, *grpc.ClientConn, error) {
-	addr, dialer, err := util.GetAddressAndDialer(socket)
-	if err != nil {
-		return nil, nil, fmt.Errorf("error getting address and dialer for socket %s: %w", socket, err)
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), connectionTimeout)
-	defer cancel()
-
-	conn, err := grpc.DialContext(ctx, addr, //nolint:staticcheck // SA1019: TODO: migrate to grpc.NewClient changes connection semantics
+// getV1Client returns a client for the PodResourcesLister grpc service
+func getV1Client(socket string, maxMsgSize int) (podresourcesapi.PodResourcesListerClient, *grpc.ClientConn, error) {
+	conn, err := grpc.NewClient(socket,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithContextDialer(dialer),
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxMsgSize)))
 	if err != nil {
-		return nil, nil, fmt.Errorf("error dialing socket %s: %w", socket, err)
+		return nil, nil, fmt.Errorf("error creating client for socket %s: %w", socket, err)
 	}
 	return podresourcesapi.NewPodResourcesListerClient(conn), conn, nil
 }
