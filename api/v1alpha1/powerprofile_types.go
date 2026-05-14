@@ -40,7 +40,7 @@ type PowerProfileSpec struct {
 	// C-states configuration
 	CStates CStatesConfig `json:"cstates,omitempty"`
 
-	// CpuCapacity defines the number or percentage of CPUs that can be allocated to this profile.
+	// Defines the number or percentage of CPUs that can be allocated to this profile.
 	// If not specified, it defaults to 100% of the available CPUs.
 	// Accepted values are:
 	// - A number (e.g., 5)
@@ -48,10 +48,10 @@ type PowerProfileSpec struct {
 	// +kubebuilder:validation:XIntOrString
 	// +kubebuilder:validation:Pattern=`^([1-9][0-9]?|100)%?$`
 	// +kubebuilder:default="100%"
-	CpuCapacity intstr.IntOrString `json:"cpuCapacity,omitempty"`
+	CPUCapacity intstr.IntOrString `json:"cpuCapacity,omitempty"`
 
-	// CPU scaling policy
-	CpuScalingPolicy *CpuScalingPolicy `json:"cpuScalingPolicy,omitempty"`
+	// Configures DPDK telemetry-based dynamic CPU frequency scaling.
+	CPUScalingPolicy *CPUScalingPolicy `json:"cpuScalingPolicy,omitempty"`
 }
 
 type NodeSelector struct {
@@ -99,10 +99,10 @@ type CStatesConfig struct {
 	MaxLatencyUs *int `json:"maxLatencyUs,omitempty"`
 }
 
-// CpuScalingPolicy configures DPDK telemetry-based dynamic CPU frequency scaling.
+// CPUScalingPolicy configures DPDK telemetry-based dynamic CPU frequency scaling.
 // +kubebuilder:validation:XValidation:rule="duration(self.samplePeriod).getMilliseconds() >= 10 && duration(self.samplePeriod).getMilliseconds() <= 1000",message="samplePeriod must be between 10ms and 1s"
 // +kubebuilder:validation:XValidation:rule="duration(self.cooldownPeriod).getMilliseconds() >= duration(self.samplePeriod).getMilliseconds()",message="cooldownPeriod must be larger than samplePeriod"
-type CpuScalingPolicy struct {
+type CPUScalingPolicy struct {
 	// Workload type
 	// +kubebuilder:validation:Enum=polling-dpdk
 	// +kubebuilder:default=polling-dpdk

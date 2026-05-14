@@ -149,7 +149,7 @@ func (m *poolMock) SetCpus(cores power.CpuList) error {
 	return m.Called(cores).Error(0)
 }
 
-func (m *poolMock) SetCpuIDs(cpuIDs []uint) error {
+func (m *poolMock) SetCpuIDs(cpuIDs []uint) error { //nolint:staticcheck // ST1003: must match power.Pool interface
 	return m.Called(cpuIDs).Error(0)
 }
 
@@ -157,7 +157,7 @@ func (m *poolMock) Remove() error {
 	return m.Called().Error(0)
 }
 
-func (m *poolMock) MoveCpuIDs(coreIDs []uint) error {
+func (m *poolMock) MoveCpuIDs(coreIDs []uint) error { //nolint:staticcheck // ST1003: must match power.Pool interface
 	return m.Called(coreIDs).Error(0)
 }
 
@@ -226,24 +226,24 @@ func (m *coreMock) SetPool(pool power.Pool) error {
 	return m.Called(pool).Error(0)
 }
 
-type mockCpuTopology struct {
+type mockCPUTopology struct {
 	mock.Mock
 	power.Topology
 }
 
-func (m *mockCpuTopology) getID() uint {
+func (m *mockCPUTopology) getID() uint {
 	return m.Called().Get(0).(uint)
 }
 
-func (m *mockCpuTopology) SetUncore(uncore power.Uncore) error {
+func (m *mockCPUTopology) SetUncore(uncore power.Uncore) error {
 	return m.Called(uncore).Error(0)
 }
 
-func (m *mockCpuTopology) applyUncore() error {
+func (m *mockCPUTopology) applyUncore() error {
 	return m.Called().Error(0)
 }
 
-func (m *mockCpuTopology) getEffectiveUncore() power.Uncore {
+func (m *mockCPUTopology) getEffectiveUncore() power.Uncore {
 	ret := m.Called()
 	if ret.Get(0) != nil {
 		return ret.Get(0).(power.Uncore)
@@ -251,7 +251,7 @@ func (m *mockCpuTopology) getEffectiveUncore() power.Uncore {
 	return nil
 }
 
-func (m *mockCpuTopology) addCpu(u uint) (power.Cpu, error) {
+func (m *mockCPUTopology) addCpu(u uint) (power.Cpu, error) { //nolint:staticcheck // ST1003: must match power.Topology interface
 	ret := m.Called(u)
 
 	var r0 power.Cpu
@@ -265,7 +265,7 @@ func (m *mockCpuTopology) addCpu(u uint) (power.Cpu, error) {
 	return r0, r1
 }
 
-func (m *mockCpuTopology) CPUs() *power.CpuList {
+func (m *mockCPUTopology) CPUs() *power.CpuList {
 	ret := m.Called()
 
 	var r0 *power.CpuList
@@ -276,7 +276,7 @@ func (m *mockCpuTopology) CPUs() *power.CpuList {
 	return r0
 }
 
-func (m *mockCpuTopology) Packages() *[]power.Package {
+func (m *mockCPUTopology) Packages() *[]power.Package {
 	ret := m.Called()
 
 	var r0 *[]power.Package
@@ -287,7 +287,7 @@ func (m *mockCpuTopology) Packages() *[]power.Package {
 	return r0
 }
 
-func (m *mockCpuTopology) Package(id uint) power.Package {
+func (m *mockCPUTopology) Package(id uint) power.Package {
 	ret := m.Called(id)
 
 	var r0 power.Package
@@ -298,7 +298,7 @@ func (m *mockCpuTopology) Package(id uint) power.Package {
 	return r0
 }
 
-type mockCpuPackage struct {
+type mockCPUPackage struct {
 	mock.Mock
 	power.Package
 }
@@ -306,22 +306,22 @@ type mockPackageList struct {
 	mock.Mock
 }
 
-func (m *mockCpuPackage) MakeList() []power.Package {
+func (m *mockCPUPackage) MakeList() []power.Package {
 	return []power.Package{m}
 }
-func (m *mockCpuPackage) getID() uint {
+func (m *mockCPUPackage) getID() uint {
 	return m.Called().Get(0).(uint)
 }
 
-func (m *mockCpuPackage) SetUncore(uncore power.Uncore) error {
+func (m *mockCPUPackage) SetUncore(uncore power.Uncore) error {
 	return m.Called(uncore).Error(0)
 }
 
-func (m *mockCpuPackage) applyUncore() error {
+func (m *mockCPUPackage) applyUncore() error {
 	return m.Called().Error(0)
 }
 
-func (m *mockCpuPackage) getEffectiveUncore() power.Uncore {
+func (m *mockCPUPackage) getEffectiveUncore() power.Uncore {
 	ret := m.Called()
 	if ret.Get(0) != nil {
 		return ret.Get(0).(power.Uncore)
@@ -329,7 +329,7 @@ func (m *mockCpuPackage) getEffectiveUncore() power.Uncore {
 	return nil
 }
 
-func (m *mockCpuPackage) addCpu(u uint) (power.Cpu, error) {
+func (m *mockCPUPackage) addCpu(u uint) (power.Cpu, error) { //nolint:staticcheck // ST1003: must match power.Package interface
 	ret := m.Called(u)
 
 	var r0 power.Cpu
@@ -343,7 +343,7 @@ func (m *mockCpuPackage) addCpu(u uint) (power.Cpu, error) {
 	return r0, r1
 }
 
-func (m *mockCpuPackage) CPUs() *power.CpuList {
+func (m *mockCPUPackage) CPUs() *power.CpuList {
 	ret := m.Called()
 
 	var r0 *power.CpuList
@@ -354,7 +354,7 @@ func (m *mockCpuPackage) CPUs() *power.CpuList {
 	return r0
 }
 
-func (m *mockCpuPackage) Dies() *[]power.Die {
+func (m *mockCPUPackage) Dies() *[]power.Die {
 	ret := m.Called()
 
 	var r0 *[]power.Die
@@ -365,7 +365,7 @@ func (m *mockCpuPackage) Dies() *[]power.Die {
 	return r0
 }
 
-func (m *mockCpuPackage) Die(id uint) power.Die {
+func (m *mockCPUPackage) Die(id uint) power.Die {
 	ret := m.Called(id)
 
 	var r0 power.Die
@@ -376,28 +376,28 @@ func (m *mockCpuPackage) Die(id uint) power.Die {
 	return r0
 }
 
-type mockCpuDie struct {
+type mockCPUDie struct {
 	mock.Mock
 	power.Die
 }
 
-func (m *mockCpuDie) MakeList() []power.Die {
+func (m *mockCPUDie) MakeList() []power.Die {
 	return []power.Die{m}
 }
 
-func (m *mockCpuDie) getID() uint {
+func (m *mockCPUDie) getID() uint {
 	return m.Called().Get(0).(uint)
 }
 
-func (m *mockCpuDie) SetUncore(uncore power.Uncore) error {
+func (m *mockCPUDie) SetUncore(uncore power.Uncore) error {
 	return m.Called(uncore).Error(0)
 }
 
-func (m *mockCpuDie) applyUncore() error {
+func (m *mockCPUDie) applyUncore() error {
 	return m.Called().Error(0)
 }
 
-func (m *mockCpuDie) getEffectiveUncore() power.Uncore {
+func (m *mockCPUDie) getEffectiveUncore() power.Uncore {
 	ret := m.Called()
 	if ret.Get(0) != nil {
 		return ret.Get(0).(power.Uncore)
@@ -405,7 +405,7 @@ func (m *mockCpuDie) getEffectiveUncore() power.Uncore {
 	return nil
 }
 
-func (m *mockCpuDie) addCpu(u uint) (power.Cpu, error) {
+func (m *mockCPUDie) addCpu(u uint) (power.Cpu, error) { //nolint:staticcheck // ST1003: must match power.Die interface
 	ret := m.Called(u)
 
 	var r0 power.Cpu
@@ -419,7 +419,7 @@ func (m *mockCpuDie) addCpu(u uint) (power.Cpu, error) {
 	return r0, r1
 }
 
-func (m *mockCpuDie) CPUs() *power.CpuList {
+func (m *mockCPUDie) CPUs() *power.CpuList {
 	ret := m.Called()
 
 	var r0 *power.CpuList
@@ -430,7 +430,7 @@ func (m *mockCpuDie) CPUs() *power.CpuList {
 	return r0
 }
 
-func (m *mockCpuDie) Cores() *[]power.Core {
+func (m *mockCPUDie) Cores() *[]power.Core {
 	ret := m.Called()
 
 	var r0 *[]power.Core
@@ -441,7 +441,7 @@ func (m *mockCpuDie) Cores() *[]power.Core {
 	return r0
 }
 
-func (m *mockCpuDie) Core(id uint) power.Core {
+func (m *mockCPUDie) Core(id uint) power.Core {
 	ret := m.Called(id)
 
 	var r0 power.Core
@@ -523,9 +523,9 @@ func setupDummyFiles(cores int, packages int, diesPerPackage int, cpufiles map[s
 	availGovFile := "cpufreq/scaling_available_governors"
 	eppFile := "cpufreq/energy_performance_preference"
 	cpuTopologyDir := "topology/"
-	packageIdFile := cpuTopologyDir + "physical_package_id"
-	dieIdFile := cpuTopologyDir + "die_id"
-	coreIdFile := cpuTopologyDir + "core_id"
+	packageIDFile := cpuTopologyDir + "physical_package_id"
+	dieIDFile := cpuTopologyDir + "die_id"
+	coreIDFile := cpuTopologyDir + "core_id"
 	uncoreDir := path + "/intel_uncore_frequency/"
 	uncoreInitMaxFreqFile := "initial_max_freq_khz"
 	uncoreInitMinFreqFile := "initial_min_freq_khz"
@@ -579,9 +579,9 @@ func setupDummyFiles(cores int, packages int, diesPerPackage int, cpufiles map[s
 			os.MkdirAll(filepath.Join(uncoreDir, pkgDir), os.ModePerm)
 		}
 		if packages != 0 {
-			os.WriteFile(filepath.Join(cpudir, packageIdFile), []byte(fmt.Sprint(pkg)+"\n"), 0o664)
-			os.WriteFile(filepath.Join(cpudir, dieIdFile), []byte(fmt.Sprint(die)+"\n"), 0o664)
-			os.WriteFile(filepath.Join(cpudir, coreIdFile), []byte(fmt.Sprint(i)+"\n"), 0o664)
+			os.WriteFile(filepath.Join(cpudir, packageIDFile), []byte(fmt.Sprint(pkg)+"\n"), 0o664)
+			os.WriteFile(filepath.Join(cpudir, dieIDFile), []byte(fmt.Sprint(die)+"\n"), 0o664)
+			os.WriteFile(filepath.Join(cpudir, coreIDFile), []byte(fmt.Sprint(i)+"\n"), 0o664)
 		}
 		for prop, value := range cpufiles {
 			switch prop {

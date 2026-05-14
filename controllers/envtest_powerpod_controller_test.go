@@ -66,7 +66,7 @@ func createPodReconcilerWithEnvTest(
 	// Create the PodResourcesClient.
 	podResourcesClient := &podresourcesclient.PodResourcesClient{
 		Client:                fakePodResClient,
-		CpuControlPlaneClient: fakePodResClient,
+		CPUControlPlaneClient: fakePodResClient,
 	}
 
 	return &PowerPodReconciler{

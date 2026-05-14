@@ -45,7 +45,7 @@ type Container struct {
 	Name string `json:"name,omitempty"`
 
 	// The ID of the Container
-	Id string `json:"id,omitempty"`
+	ID string `json:"id,omitempty"`
 
 	// The name of the Pod the Container is running on
 	Pod string `json:"pod,omitempty"`

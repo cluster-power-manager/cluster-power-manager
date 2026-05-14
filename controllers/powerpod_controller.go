@@ -221,7 +221,7 @@ func (r *PowerPodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			}
 		}
 
-		// Set up DPDK telemetry and scaling if the profile has a CpuScalingPolicy.
+		// Set up DPDK telemetry and scaling if the profile has a CPUScalingPolicy.
 		if r.DPDKTelemetryClient == nil || r.CPUScalingManager == nil {
 			continue
 		}
@@ -236,7 +236,7 @@ func (r *PowerPodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			}
 			return ctrl.Result{}, fmt.Errorf("failed to get PowerProfile: %w", err)
 		}
-		if profile.Spec.CpuScalingPolicy != nil && profile.Spec.CpuScalingPolicy.WorkloadType == WorkloadTypePollingDPDK {
+		if profile.Spec.CPUScalingPolicy != nil && profile.Spec.CPUScalingPolicy.WorkloadType == WorkloadTypePollingDPDK {
 			if dpdkContainerAssigned {
 				container.Errors = append(container.Errors,
 					"DPDK dynamic frequency scaling is only supported for a single container per pod; this container is skipped")
@@ -248,7 +248,7 @@ func (r *PowerPodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 					WatchedCPUs: container.CPUIDs,
 				})
 				// Build per-CPU scaling options.
-				scalingOpts, err := r.generateCPUScalingOpts(profile.Spec.CpuScalingPolicy, container.CPUIDs)
+				scalingOpts, err := r.generateCPUScalingOpts(profile.Spec.CPUScalingPolicy, container.CPUIDs)
 				if err != nil {
 					msg := "some CPUs could not be configured for DPDK scaling"
 					logger.Error(err, msg, "container", container.Name)
@@ -277,7 +277,7 @@ func (r *PowerPodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	for _, pc := range powerContainers {
 		stateContainers = append(stateContainers, powerv1alpha1.Container{
 			Name:          pc.Name,
-			Id:            pc.ID,
+			ID:            pc.ID,
 			PowerProfile:  pc.PowerProfile,
 			ExclusiveCPUs: pc.CPUIDs,
 		})
@@ -467,7 +467,7 @@ func doesContainerRequireExclusiveCPUs(pod *corev1.Pod, container *corev1.Contai
 func pingControlPlane(client podresourcesclient.PodResourcesClient) bool {
 	// see if the socket sends a response
 	req := podresourcesapi.ListPodResourcesRequest{}
-	_, err := client.CpuControlPlaneClient.List(context.TODO(), &req)
+	_, err := client.CPUControlPlaneClient.List(context.TODO(), &req)
 	return err == nil
 }
 
@@ -636,9 +636,9 @@ func (r *PowerPodReconciler) areCPUsInSharedPool(cpuIDs []uint) bool {
 	return true
 }
 
-// generateCPUScalingOpts translates a CpuScalingPolicy and a set of CPUs
+// generateCPUScalingOpts translates a CPUScalingPolicy and a set of CPUs
 // into a list of per-CPU scaling options used by the CPUScalingManager.
-func (r *PowerPodReconciler) generateCPUScalingOpts(scalingPolicy *powerv1alpha1.CpuScalingPolicy, cpuIDs []uint) ([]scaling.CPUScalingOpts, error) {
+func (r *PowerPodReconciler) generateCPUScalingOpts(scalingPolicy *powerv1alpha1.CPUScalingPolicy, cpuIDs []uint) ([]scaling.CPUScalingOpts, error) {
 	allCpus := r.PowerLibrary.GetAllCpus()
 	optsList := make([]scaling.CPUScalingOpts, 0, len(cpuIDs))
 
@@ -680,7 +680,7 @@ func (r *PowerPodReconciler) generateCPUScalingOpts(scalingPolicy *powerv1alpha1
 
 func (r *PowerPodReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// Register a field index on Pod.spec.nodeName so that profileToPodRequests
-	// can efficiently list pods on this node when a profile's CpuScalingPolicy changes.
+	// can efficiently list pods on this node when a profile's CPUScalingPolicy changes.
 	if err := mgr.GetFieldIndexer().IndexField(context.TODO(), &corev1.Pod{}, "spec.nodeName",
 		func(obj client.Object) []string {
 			return []string{obj.(*corev1.Pod).Spec.NodeName}
@@ -703,7 +703,7 @@ func (r *PowerPodReconciler) SetupWithManager(mgr ctrl.Manager) error {
 						return false
 					}
 					// Filter for CPU scaling policy changes only.
-					return !reflect.DeepEqual(oldProfile.Spec.CpuScalingPolicy, newProfile.Spec.CpuScalingPolicy)
+					return !reflect.DeepEqual(oldProfile.Spec.CPUScalingPolicy, newProfile.Spec.CPUScalingPolicy)
 				},
 				CreateFunc:  func(e event.CreateEvent) bool { return false },
 				GenericFunc: func(ge event.GenericEvent) bool { return false },
@@ -714,7 +714,7 @@ func (r *PowerPodReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // powerProfileToPodRequests returns reconcile requests for all pods on this node
 // that use the given PowerProfile. This re-reconciles their DPDK scaling
-// when a profile's CpuScalingPolicy changes.
+// when a profile's CPUScalingPolicy changes.
 func (r *PowerPodReconciler) powerProfileToPodRequests(ctx context.Context, obj client.Object) []reconcile.Request {
 	requests := []reconcile.Request{}
 

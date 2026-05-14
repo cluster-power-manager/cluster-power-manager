@@ -19,7 +19,7 @@ var cPlaneRetries = 3
 // PodResourcesClient stores a client to the Kubelet PodResources API server
 type PodResourcesClient struct {
 	Client                podresourcesapi.PodResourcesListerClient
-	CpuControlPlaneClient podresourcesapi.PodResourcesListerClient
+	CPUControlPlaneClient podresourcesapi.PodResourcesListerClient
 }
 
 // NewPodResourcesClient returns a new client to the Kubelet PodResources API server
@@ -38,7 +38,7 @@ func NewDualSocketPodClient() (*PodResourcesClient, error) {
 		return client, err
 	}
 	cPlane, err := NewControlPlaneClient()
-	client.CpuControlPlaneClient = cPlane.Client
+	client.CPUControlPlaneClient = cPlane.Client
 	return client, err
 }
 
@@ -64,8 +64,8 @@ func getV1Client(socket string, maxMsgSize int) (podresourcesapi.PodResourcesLis
 func (p *PodResourcesClient) listResources(controlPlaneClient bool) (*podresourcesapi.ListPodResourcesResponse, error) {
 	var client podresourcesapi.PodResourcesListerClient
 	clientType := "default"
-	if controlPlaneClient && p.CpuControlPlaneClient != nil {
-		client = p.CpuControlPlaneClient
+	if controlPlaneClient && p.CPUControlPlaneClient != nil {
+		client = p.CPUControlPlaneClient
 		clientType = "cpuControlPlane"
 	} else {
 		client = p.Client
@@ -123,9 +123,9 @@ func parseContainers(resources []*podresourcesapi.PodResources, podName, contain
 }
 
 // cpuIDsToString returns a string in cpuset format
-func cpuIDsToString(cpuIds []int64) string {
+func cpuIDsToString(cpuIDs []int64) string {
 	intSlice := make([]int, 0)
-	for _, num := range cpuIds {
+	for _, num := range cpuIDs {
 		intSlice = append(intSlice, int(num))
 	}
 

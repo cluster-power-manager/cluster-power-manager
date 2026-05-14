@@ -2131,7 +2131,7 @@ func TestPowerProfile_Reconcile_NodeSelectorAndCapacity(t *testing.T) {
 			expectExtendedResource:  false,
 		},
 
-		// CpuCapacity scenarios
+		// CPUCapacity scenarios
 		{
 			name:                    "Absolute CPU count",
 			profileName:             "absolute-cpu-profile",
@@ -2284,14 +2284,14 @@ func TestPowerProfile_Reconcile_NodeSelectorAndCapacity(t *testing.T) {
 			// Set cpuCapacity if provided
 			if tc.cpuCapacity != "" {
 				if strings.HasSuffix(tc.cpuCapacity, "%") {
-					profile.Spec.CpuCapacity = intstr.FromString(tc.cpuCapacity)
+					profile.Spec.CPUCapacity = intstr.FromString(tc.cpuCapacity)
 				} else {
 					// Parse as absolute integer value
 					cpuCount, err := strconv.Atoi(tc.cpuCapacity)
 					if err == nil {
-						profile.Spec.CpuCapacity = intstr.FromInt32(int32(cpuCount))
+						profile.Spec.CPUCapacity = intstr.FromInt32(int32(cpuCount))
 					} else {
-						profile.Spec.CpuCapacity = intstr.FromString(tc.cpuCapacity)
+						profile.Spec.CPUCapacity = intstr.FromString(tc.cpuCapacity)
 					}
 				}
 			}
@@ -2394,7 +2394,7 @@ func TestPowerProfile_Reconcile_NodeSelectorCleanup(t *testing.T) {
 					},
 				},
 			},
-			CpuCapacity: intstr.FromString("50%"),
+			CPUCapacity: intstr.FromString("50%"),
 			PStates: powerv1alpha1.PStatesConfig{
 				Max:      &intstr.IntOrString{Type: intstr.Int, IntVal: 3600},
 				Min:      &intstr.IntOrString{Type: intstr.Int, IntVal: 3200},

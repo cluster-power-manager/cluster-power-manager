@@ -292,11 +292,11 @@ func (r *PowerProfileReconciler) ensureExtendedResources(ctx context.Context, no
 	totalCPUs := len(*r.PowerLibrary.GetAllCpus())
 	logger.V(0).Info("configuring based on the capacity associated to the specific power profile")
 
-	// Calculate CPU count based on profile's CpuCapacity or default to all CPUs.
+	// Calculate CPU count based on profile's CPUCapacity or default to all CPUs.
 	var numExtendedResources int64
-	if profile.Spec.CpuCapacity.String() != "" {
+	if profile.Spec.CPUCapacity.String() != "" {
 		// Use the standard library function to handle IntOrString properly.
-		absoluteCPUs, err := intstr.GetScaledValueFromIntOrPercent(&profile.Spec.CpuCapacity, totalCPUs, false)
+		absoluteCPUs, err := intstr.GetScaledValueFromIntOrPercent(&profile.Spec.CPUCapacity, totalCPUs, false)
 		if err == nil && absoluteCPUs > 0 {
 			numExtendedResources = int64(absoluteCPUs)
 		} else {

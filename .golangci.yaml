@@ -50,8 +50,6 @@ linters:
         # Exclude some staticcheck rules
         - -QF1008 # embedded field selector simplification
         - -ST1000 # package comments
-        # TODO: temporarily disable ST1003 to unblock existing linting
-        - -ST1003 # naming conventions
 
 formatters:
   enable:
