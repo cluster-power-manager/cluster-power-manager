@@ -77,7 +77,7 @@ func createFakePodResourcesListerClient(fakePodResources []*podresourcesapi.PodR
 
 	podResourcesListerClient := &fakePodResourcesClient{}
 	podResourcesListerClient.listResponse = fakeListResponse
-	return &podresourcesclient.PodResourcesClient{Client: podResourcesListerClient, CpuControlPlaneClient: podResourcesListerClient}
+	return &podresourcesclient.PodResourcesClient{Client: podResourcesListerClient, CPUControlPlaneClient: podResourcesListerClient}
 }
 
 func createPodReconcilerObject(objs []runtime.Object, podResourcesClient *podresourcesclient.PodResourcesClient) (*PowerPodReconciler, error) {
@@ -899,7 +899,7 @@ func TestPowerPod_Reconcile_Delete(t *testing.T) {
 				Containers: []powerv1alpha1.Container{
 					{
 						Name:          "test-container-1",
-						Id:            "abcdefg",
+						ID:            "abcdefg",
 						Pod:           "test-pod-1",
 						ExclusiveCPUs: []uint{1, 2, 3},
 						PowerProfile:  "performance",
@@ -1071,7 +1071,7 @@ func TestPowerPod_Reconcile_PodClientErrs(t *testing.T) {
 				Containers: []powerv1alpha1.Container{
 					{
 						Name:          "test-container-1",
-						Id:            "abcdefg",
+						ID:            "abcdefg",
 						Pod:           "test-pod-1",
 						ExclusiveCPUs: []uint{1, 2, 3},
 						PowerProfile:  "performance",
@@ -2264,7 +2264,7 @@ func TestPowerPod_generateCPUScalingOpts(t *testing.T) {
 		cpuList[i] = cpu
 	}
 
-	policy := &powerv1alpha1.CpuScalingPolicy{
+	policy := &powerv1alpha1.CPUScalingPolicy{
 		WorkloadType:               WorkloadTypePollingDPDK,
 		SamplePeriod:               &metav1.Duration{Duration: 10 * time.Millisecond},
 		CooldownPeriod:             &metav1.Duration{Duration: 30 * time.Millisecond},
@@ -2338,7 +2338,7 @@ func TestPowerPod_generateCPUScalingOpts(t *testing.T) {
 	}
 }
 
-func TestPowerPod_Reconcile_WithCpuScalingPolicy(t *testing.T) {
+func TestPowerPod_Reconcile_WithCPUScalingPolicy(t *testing.T) {
 	testNode := "TestNode"
 	t.Setenv("NODE_NAME", testNode)
 
@@ -2381,8 +2381,8 @@ func TestPowerPod_Reconcile_WithCpuScalingPolicy(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Build CpuScalingPolicy and PowerProfile.
-			policy := &powerv1alpha1.CpuScalingPolicy{
+			// Build CPUScalingPolicy and PowerProfile.
+			policy := &powerv1alpha1.CPUScalingPolicy{
 				WorkloadType:               WorkloadTypePollingDPDK,
 				SamplePeriod:               &metav1.Duration{Duration: tc.sample},
 				CooldownPeriod:             &metav1.Duration{Duration: tc.cooldown},
@@ -2394,7 +2394,7 @@ func TestPowerPod_Reconcile_WithCpuScalingPolicy(t *testing.T) {
 			}
 			profile := &powerv1alpha1.PowerProfile{
 				ObjectMeta: metav1.ObjectMeta{Name: tc.profileName, Namespace: PowerNamespace},
-				Spec:       powerv1alpha1.PowerProfileSpec{CpuScalingPolicy: policy},
+				Spec:       powerv1alpha1.PowerProfileSpec{CPUScalingPolicy: policy},
 			}
 
 			// Build resource requirements referencing the profile.
@@ -2523,7 +2523,7 @@ func TestPowerPod_Reconcile_MultipleDPDKContainersRejected(t *testing.T) {
 
 	profileName := "dpdk-profile"
 
-	policy := &powerv1alpha1.CpuScalingPolicy{
+	policy := &powerv1alpha1.CPUScalingPolicy{
 		WorkloadType:               WorkloadTypePollingDPDK,
 		SamplePeriod:               &metav1.Duration{Duration: 10 * time.Millisecond},
 		CooldownPeriod:             &metav1.Duration{Duration: 30 * time.Millisecond},
@@ -2535,7 +2535,7 @@ func TestPowerPod_Reconcile_MultipleDPDKContainersRejected(t *testing.T) {
 	}
 	profile := &powerv1alpha1.PowerProfile{
 		ObjectMeta: metav1.ObjectMeta{Name: profileName, Namespace: PowerNamespace},
-		Spec:       powerv1alpha1.PowerProfileSpec{CpuScalingPolicy: policy},
+		Spec:       powerv1alpha1.PowerProfileSpec{CPUScalingPolicy: policy},
 	}
 
 	// Both containers request the same DPDK profile.

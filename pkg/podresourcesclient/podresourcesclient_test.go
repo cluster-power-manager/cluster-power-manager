@@ -32,7 +32,7 @@ func createFakePodResourcesListerClient(fakePodResources []*podresourcesapi.PodR
 
 	podResourcesListerClient := &fakePodResourcesClient{}
 	podResourcesListerClient.listResponse = fakeListResponse
-	return &PodResourcesClient{Client: podResourcesListerClient, CpuControlPlaneClient: podResourcesListerClient}
+	return &PodResourcesClient{Client: podResourcesListerClient, CPUControlPlaneClient: podResourcesListerClient}
 }
 
 func TestPodResourcesClient_listPodResources(t *testing.T) {
@@ -85,10 +85,10 @@ func Test_cpuIDsToString(t *testing.T) {
 	assert.Equal(t, "", cpuIDsToString([]int64{}))
 	assert.Equal(t, "0,2", cpuIDsToString([]int64{0, 0, 0, 2, 2, 2, 0, 2, 0, 2, 0}))
 	maxSize := 9999
-	cpuIds := make([]int64, maxSize)
-	for i := range cpuIds {
-		cpuIds[i] = int64(i)
+	cpuIDs := make([]int64, maxSize)
+	for i := range cpuIDs {
+		cpuIDs[i] = int64(i)
 	}
-	assert.Equal(t, fmt.Sprint("0-", maxSize-1), cpuIDsToString(cpuIds))
+	assert.Equal(t, fmt.Sprint("0-", maxSize-1), cpuIDsToString(cpuIDs))
 
 }

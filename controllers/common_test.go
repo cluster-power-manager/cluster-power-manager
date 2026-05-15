@@ -200,7 +200,7 @@ func Test_addPowerNodeStatusProfileEntry(t *testing.T) {
 			expectedErrMsg: "patch error",
 		},
 		{
-			testCase:                "Profile with CpuScalingPolicy includes policy in config string",
+			testCase:                "Profile with CPUScalingPolicy includes policy in config string",
 			nodeName:                "test-node",
 			expectError:             false,
 			shouldVerifyPatchObject: true,
@@ -216,7 +216,7 @@ func Test_addPowerNodeStatusProfileEntry(t *testing.T) {
 						Governor: "userspace",
 						Epp:      "performance",
 					},
-					CpuScalingPolicy: &powerv1alpha1.CpuScalingPolicy{
+					CPUScalingPolicy: &powerv1alpha1.CPUScalingPolicy{
 						WorkloadType:               "polling-dpdk",
 						SamplePeriod:               &v1.Duration{Duration: 10 * time.Millisecond},
 						CooldownPeriod:             &v1.Duration{Duration: 30 * time.Millisecond},
@@ -231,7 +231,7 @@ func Test_addPowerNodeStatusProfileEntry(t *testing.T) {
 			verifyPatchedObject: func(t *testing.T, pns *powerv1alpha1.PowerNodeState) {
 				assert.Len(t, pns.Status.PowerProfiles, 1, "Should have 1 profile")
 				assert.Equal(t, "dpdk-profile", pns.Status.PowerProfiles[0].Name)
-				expectedConfig := `Min: 2000, Max: 3000, Governor: userspace, EPP: performance, C-States: , CpuScalingPolicy: {"workloadType":"polling-dpdk","samplePeriod":"10ms","cooldownPeriod":"30ms","targetUsage":80,"allowedUsageDifference":5,"allowedFrequencyDifference":25,"scalePercentage":50,"fallbackFreqPercent":0}`
+				expectedConfig := `Min: 2000, Max: 3000, Governor: userspace, EPP: performance, C-States: , CPUScalingPolicy: {"workloadType":"polling-dpdk","samplePeriod":"10ms","cooldownPeriod":"30ms","targetUsage":80,"allowedUsageDifference":5,"allowedFrequencyDifference":25,"scalePercentage":50,"fallbackFreqPercent":0}`
 				assert.Equal(t, expectedConfig, pns.Status.PowerProfiles[0].Config)
 				assert.Empty(t, pns.Status.PowerProfiles[0].Errors)
 			},
@@ -264,10 +264,10 @@ func Test_addPowerNodeStatusProfileEntry(t *testing.T) {
 	}
 }
 
-func Test_formatCpuScalingPolicy(t *testing.T) {
+func Test_formatCPUScalingPolicy(t *testing.T) {
 	tcases := []struct {
 		name        string
-		policy      *powerv1alpha1.CpuScalingPolicy
+		policy      *powerv1alpha1.CPUScalingPolicy
 		expected    string
 		expectError bool
 	}{
@@ -278,12 +278,12 @@ func Test_formatCpuScalingPolicy(t *testing.T) {
 		},
 		{
 			name:     "Empty policy returns empty string",
-			policy:   &powerv1alpha1.CpuScalingPolicy{},
+			policy:   &powerv1alpha1.CPUScalingPolicy{},
 			expected: "",
 		},
 		{
 			name: "Full policy with all fields",
-			policy: &powerv1alpha1.CpuScalingPolicy{
+			policy: &powerv1alpha1.CPUScalingPolicy{
 				WorkloadType:               "polling-dpdk",
 				SamplePeriod:               &v1.Duration{Duration: 10 * time.Millisecond},
 				CooldownPeriod:             &v1.Duration{Duration: 30 * time.Millisecond},
@@ -297,7 +297,7 @@ func Test_formatCpuScalingPolicy(t *testing.T) {
 		},
 		{
 			name: "Policy with partial fields omits nil fields",
-			policy: &powerv1alpha1.CpuScalingPolicy{
+			policy: &powerv1alpha1.CPUScalingPolicy{
 				WorkloadType:   "polling-dpdk",
 				SamplePeriod:   &v1.Duration{Duration: 20 * time.Millisecond},
 				CooldownPeriod: &v1.Duration{Duration: 50 * time.Millisecond},
@@ -309,7 +309,7 @@ func Test_formatCpuScalingPolicy(t *testing.T) {
 
 	for _, tc := range tcases {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := formatCpuScalingPolicy(tc.policy)
+			result, err := formatCPUScalingPolicy(tc.policy)
 			if tc.expectError {
 				assert.Error(t, err)
 			} else {

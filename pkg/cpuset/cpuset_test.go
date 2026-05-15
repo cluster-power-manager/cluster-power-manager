@@ -488,9 +488,9 @@ func TestUnionAll(t *testing.T) {
 	}
 
 	var emptySets []CPUSet
-	union_allA := cpusetA.UnionAll(emptySets)
+	unionAllA := cpusetA.UnionAll(emptySets)
 
-	assert.True(t, expectedA.Equals(union_allA))
+	assert.True(t, expectedA.Equals(unionAllA))
 
 	// Test case -- Non-empty set union with non-empty sets
 	cpusetJ := CPUSet{
@@ -522,9 +522,9 @@ func TestUnionAll(t *testing.T) {
 	}
 
 	sets := []CPUSet{cpusetK, cpusetL}
-	union_allB := cpusetJ.UnionAll(sets)
+	unionAllB := cpusetJ.UnionAll(sets)
 
-	assert.True(t, expectedB.Equals(union_allB))
+	assert.True(t, expectedB.Equals(unionAllB))
 }
 
 func TestIntersection(t *testing.T) {

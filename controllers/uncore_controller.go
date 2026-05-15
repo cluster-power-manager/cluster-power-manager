@@ -187,10 +187,10 @@ func (r *UncoreReconciler) applyUncoreConfig(
 
 	// Apply system-wide uncore settings.
 	if spec.SysMax != nil && spec.SysMin != nil {
-		p_uncore, err := power.NewUncore(*spec.SysMin, *spec.SysMax)
+		pUncore, err := power.NewUncore(*spec.SysMin, *spec.SysMax)
 		if err != nil {
 			applyErrors = append(applyErrors, fmt.Sprintf("error creating system uncore: %v", err))
-		} else if err := r.PowerLibrary.Topology().SetUncore(p_uncore); err != nil {
+		} else if err := r.PowerLibrary.Topology().SetUncore(pUncore); err != nil {
 			applyErrors = append(applyErrors, fmt.Sprintf("error setting system uncore: %v", err))
 		} else {
 			configParts = append(configParts, fmt.Sprintf("SysMin: %d, SysMax: %d", *spec.SysMin, *spec.SysMax))
@@ -204,7 +204,7 @@ func (r *UncoreReconciler) applyUncoreConfig(
 				applyErrors = append(applyErrors, "die selector max, min and package fields must not be empty")
 				continue
 			}
-			p_uncore, err := power.NewUncore(*dieselect.Min, *dieselect.Max)
+			pUncore, err := power.NewUncore(*dieselect.Min, *dieselect.Max)
 			if err != nil {
 				applyErrors = append(applyErrors, fmt.Sprintf("error creating uncore for package %d: %v", *dieselect.Package, err))
 				continue
@@ -216,7 +216,7 @@ func (r *UncoreReconciler) applyUncoreConfig(
 					applyErrors = append(applyErrors, fmt.Sprintf("invalid package: %d", *dieselect.Package))
 					continue
 				}
-				if err := pkg.SetUncore(p_uncore); err != nil {
+				if err := pkg.SetUncore(pUncore); err != nil {
 					applyErrors = append(applyErrors, fmt.Sprintf("error setting uncore for package %d: %v", *dieselect.Package, err))
 					continue
 				}
@@ -233,7 +233,7 @@ func (r *UncoreReconciler) applyUncoreConfig(
 					applyErrors = append(applyErrors, fmt.Sprintf("invalid die: %d", *dieselect.Die))
 					continue
 				}
-				if err := die.SetUncore(p_uncore); err != nil {
+				if err := die.SetUncore(pUncore); err != nil {
 					applyErrors = append(applyErrors, fmt.Sprintf("error setting uncore for package %d die %d: %v", *dieselect.Package, *dieselect.Die, err))
 					continue
 				}

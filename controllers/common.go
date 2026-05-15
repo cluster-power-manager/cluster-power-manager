@@ -222,10 +222,10 @@ func formatIntOrString(value *intstr.IntOrString) string {
 	return value.StrVal
 }
 
-// formatCpuScalingPolicy serializes a CpuScalingPolicy to its JSON representation.
+// formatCPUScalingPolicy serializes a CPUScalingPolicy to its JSON representation.
 // Returns empty string if policy is nil. Nil fields within the policy are omitted.
-func formatCpuScalingPolicy(policy *powerv1alpha1.CpuScalingPolicy) (string, error) {
-	if policy == nil || *policy == (powerv1alpha1.CpuScalingPolicy{}) {
+func formatCPUScalingPolicy(policy *powerv1alpha1.CPUScalingPolicy) (string, error) {
+	if policy == nil || *policy == (powerv1alpha1.CPUScalingPolicy{}) {
 		return "", nil
 	}
 	b, err := json.Marshal(policy)
@@ -280,12 +280,12 @@ func addPowerNodeStatusProfileEntry(ctx context.Context, c client.Client, nodeNa
 		formatIntOrString(profile.Spec.PStates.Min), formatIntOrString(profile.Spec.PStates.Max),
 		profile.Spec.PStates.Governor, profile.Spec.PStates.Epp, cstatesString)
 
-	scalingStr, err := formatCpuScalingPolicy(profile.Spec.CpuScalingPolicy)
+	scalingStr, err := formatCPUScalingPolicy(profile.Spec.CPUScalingPolicy)
 	if err != nil {
 		return err
 	}
 	if scalingStr != "" {
-		config += ", CpuScalingPolicy: " + scalingStr
+		config += ", CPUScalingPolicy: " + scalingStr
 	}
 
 	errList := util.UnpackErrsToStrings(profileErrors)

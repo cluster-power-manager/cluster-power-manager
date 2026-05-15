@@ -45,7 +45,7 @@ spec:
                 - type: string
                 default: 100%
                 description: |-
-                  CpuCapacity defines the number or percentage of CPUs that can be allocated to this profile.
+                  Defines the number or percentage of CPUs that can be allocated to this profile.
                   If not specified, it defaults to 100% of the available CPUs.
                   Accepted values are:
                   - A number (e.g., 5)
@@ -53,7 +53,8 @@ spec:
                 pattern: ^([1-9][0-9]?|100)%?$
                 x-kubernetes-int-or-string: true
               cpuScalingPolicy:
-                description: CPU scaling policy
+                description: Configures DPDK telemetry-based dynamic CPU frequency
+                  scaling.
                 properties:
                   allowedFrequencyDifference:
                     default: 25
