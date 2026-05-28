@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	powerv1alpha1 "github.com/cluster-power-manager/cluster-power-manager/api/v1alpha1"
-	"github.com/intel/power-optimization-library/pkg/power"
+	"github.com/cluster-power-manager/cluster-power-manager/internal/power"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"

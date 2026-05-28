@@ -35,8 +35,8 @@ import (
 	"github.com/cluster-power-manager/cluster-power-manager/pkg/podresourcesclient"
 
 	"github.com/cluster-power-manager/cluster-power-manager/controllers"
+	"github.com/cluster-power-manager/cluster-power-manager/internal/power"
 	"github.com/cluster-power-manager/cluster-power-manager/pkg/podstate"
-	"github.com/intel/power-optimization-library/pkg/power"
 	// +kubebuilder:scaffold:imports
 )
 

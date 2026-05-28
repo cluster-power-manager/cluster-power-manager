@@ -53,7 +53,7 @@ The Cluster Power Manager supports all of the above use cases.
 - **Frequency Tuning**
 
   Frequency tuning allows the individual cores on the system to be sped up or slowed down by changing their frequency.
-  This tuning is done via the [Power Optimization Library](./power-optimization-library) which is now part of the project. More details in the [kernel CPU Performance Scaling section](https://docs.kernel.org/admin-guide/pm/cpufreq.html#cpu-performance-scaling).
+  This tuning is done via the [Power Optimization Library](./internal/power) which is now part of the project. More details in the [kernel CPU Performance Scaling section](https://docs.kernel.org/admin-guide/pm/cpufreq.html#cpu-performance-scaling).
 
   - **`scaling_min_freq` and `scaling_max_freq`**
 
@@ -436,7 +436,7 @@ Running any OLM target without `OCP=true` will produce an error.
 
 ### Power Optimization Library
 
-The [Power Optimization Library](./power-optimization-library) takes the desired configuration
+The [Power Optimization Library](./internal/power) takes the desired configuration
 for the cores associated with Exclusive Pods and tunes them based on the requested `PowerProfile`. The Power Optimization
 Library will also facilitate the use of C-States functionality.
 

@@ -9,7 +9,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/intel/power-optimization-library/pkg/power"
+	"github.com/cluster-power-manager/cluster-power-manager/internal/power"
 )
 
 // Func definitions for unit testing

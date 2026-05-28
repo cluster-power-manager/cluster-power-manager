@@ -174,7 +174,6 @@ all: manifests generate install
 ENVTEST_ASSETS_DIR = $(shell pwd)/testbin
 test: generate fmt vet manifests test-envtest
 	go test -v ./... -coverprofile cover.out
-	cd power-optimization-library && go test -v ./... -coverprofile cover.out
 
 # Run envtest integration tests (requires real API server via envtest, excluded from regular test runs via build tag)
 .PHONY: test-envtest
@@ -493,7 +492,7 @@ catalog-push:
 endif
 
 coverage:
-	go test -v -coverprofile=coverage.out ./controllers/ ./pkg/...
+	go test -v -coverprofile=coverage.out ./controllers/ ./pkg/... ./internal/...
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Average code coverage: $$(go tool cover -func coverage.out | awk 'END {print $$3}' | sed 's/\..*//')%" 
 	@if [ $$(go tool cover -func coverage.out | awk 'END {print $$3}' | sed 's/\..*//') -lt 85 ]; then \

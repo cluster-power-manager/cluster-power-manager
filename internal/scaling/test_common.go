@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/intel/power-optimization-library/pkg/power"
+	"github.com/cluster-power-manager/cluster-power-manager/internal/power"
 )
 
 // setupScalingTestFiles creates a mock filesystem for scaling tests

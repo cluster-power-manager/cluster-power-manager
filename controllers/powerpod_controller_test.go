@@ -23,11 +23,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	powerv1alpha1 "github.com/cluster-power-manager/cluster-power-manager/api/v1alpha1"
+	"github.com/cluster-power-manager/cluster-power-manager/internal/power"
 	"github.com/cluster-power-manager/cluster-power-manager/internal/scaling"
 	"github.com/cluster-power-manager/cluster-power-manager/pkg/podresourcesclient"
 	"github.com/cluster-power-manager/cluster-power-manager/pkg/podstate"
 	"github.com/go-logr/logr"
-	"github.com/intel/power-optimization-library/pkg/power"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"

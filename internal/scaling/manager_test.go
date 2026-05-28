@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/intel/power-optimization-library/pkg/power"
+	"github.com/cluster-power-manager/cluster-power-manager/internal/power"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap/zapcore"
 	ctrl "sigs.k8s.io/controller-runtime"

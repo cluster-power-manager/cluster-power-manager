@@ -28,9 +28,9 @@ import (
 	e "errors"
 
 	powerv1alpha1 "github.com/cluster-power-manager/cluster-power-manager/api/v1alpha1"
+	"github.com/cluster-power-manager/cluster-power-manager/internal/power"
 	"github.com/cluster-power-manager/cluster-power-manager/internal/scaling"
 	"github.com/go-logr/logr"
-	"github.com/intel/power-optimization-library/pkg/power"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
