@@ -99,56 +99,7 @@ func (r *PowerPodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	nodeName := os.Getenv("NODE_NAME")
 
 	if !pod.ObjectMeta.DeletionTimestamp.IsZero() || pod.Status.Phase == corev1.PodSucceeded {
-		// If the pod's deletion timestamp is not zero, then the pod has been deleted
-
-		// Delete the Pod from the internal state in case it was never deleted
-		_ = r.State.DeletePodFromState(pod.GetName(), pod.GetNamespace())
-
-		// Get the pod's CPU assignments from PowerNodeState to know what to clean up.
-		powerNodeStateName := fmt.Sprintf("%s-power-state", nodeName)
-		currentNodeState := &powerv1alpha1.PowerNodeState{}
-
-		// Get the PowerNodeState to find this pod's CPU assignments and move them back to the shared pool.
-		err = r.Get(ctx, client.ObjectKey{Namespace: PowerNamespace, Name: powerNodeStateName}, currentNodeState)
-		if err != nil {
-			if errors.IsNotFound(err) {
-				logger.Info("WARNING: PowerNodeState not found during pod deletion, CPUs may remain in exclusive pool", "powerNodeState", powerNodeStateName)
-			} else {
-				logger.Error(err, "failed to get PowerNodeState")
-				return ctrl.Result{}, err
-			}
-		} else if currentNodeState.Status.CPUPools != nil {
-			// Move the pod's CPUs back to the shared pool.
-			var deletedCPUIDs []uint
-			for _, exclusive := range currentNodeState.Status.CPUPools.Exclusive {
-				if exclusive.PodUID == string(pod.GetUID()) {
-					for _, container := range exclusive.PowerContainers {
-						logger.V(5).Info("moving CPUs back to shared pool", "container", container.Name, "profile", container.PowerProfile, "cpus", container.CPUIDs)
-						if err := r.PowerLibrary.GetSharedPool().MoveCpuIDs(container.CPUIDs); err != nil {
-							logger.Error(err, "failed to move CPUs back to shared pool", "container", container.Name, "profile", container.PowerProfile)
-							return ctrl.Result{}, err
-						}
-						deletedCPUIDs = append(deletedCPUIDs, container.CPUIDs...)
-					}
-					break
-				}
-			}
-
-			// Tear down DPDK telemetry and scaling for this pod's CPUs.
-			// No-op for non-DPDK pods: CloseConnection and RemoveCPUScaling
-			// safely ignore entries that don't exist.
-			if r.DPDKTelemetryClient != nil && r.CPUScalingManager != nil {
-				r.DPDKTelemetryClient.CloseConnection(string(pod.GetUID()))
-				r.CPUScalingManager.RemoveCPUScaling(deletedCPUIDs)
-			}
-		}
-
-		// Remove the pod's entry from PowerNodeState via SSA.
-		if err := r.removePowerNodeStatusExclusiveEntry(ctx, nodeName, string(pod.GetUID()), &logger); err != nil {
-			return ctrl.Result{}, err
-		}
-
-		return ctrl.Result{}, nil
+		return r.handlePodDeletion(ctx, pod, nodeName, &logger)
 	}
 
 	// If the pod's deletion timestamp is equal to zero, then the pod has been created or updated.
@@ -294,6 +245,60 @@ func (r *PowerPodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		logger.Error(wrappedErrs, "recoverable errors")
 		return ctrl.Result{Requeue: false}, fmt.Errorf("recoverable errors encountered: %w", wrappedErrs)
 	}
+	return ctrl.Result{}, nil
+}
+
+// handlePodDeletion cleans up when a guaranteed pod is deleted or succeeded. It moves the pod's
+// exclusive CPUs back to the shared pool, tears down any DPDK telemetry/scaling, and removes
+// the pod's entry from PowerNodeState.
+func (r *PowerPodReconciler) handlePodDeletion(ctx context.Context, pod *corev1.Pod, nodeName string, logger *logr.Logger) (ctrl.Result, error) {
+	// Delete the Pod from the internal state in case it was never deleted
+	_ = r.State.DeletePodFromState(pod.GetName(), pod.GetNamespace())
+
+	// Get the pod's CPU assignments from PowerNodeState to know what to clean up.
+	powerNodeStateName := fmt.Sprintf("%s-power-state", nodeName)
+	currentNodeState := &powerv1alpha1.PowerNodeState{}
+
+	// Get the PowerNodeState to find this pod's CPU assignments and move them back to the shared pool.
+	err := r.Get(ctx, client.ObjectKey{Namespace: PowerNamespace, Name: powerNodeStateName}, currentNodeState)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			logger.Info("WARNING: PowerNodeState not found during pod deletion, CPUs may remain in exclusive pool", "powerNodeState", powerNodeStateName)
+		} else {
+			logger.Error(err, "failed to get PowerNodeState")
+			return ctrl.Result{}, err
+		}
+	} else if currentNodeState.Status.CPUPools != nil {
+		// Move the pod's CPUs back to the shared pool.
+		var deletedCPUIDs []uint
+		for _, exclusive := range currentNodeState.Status.CPUPools.Exclusive {
+			if exclusive.PodUID == string(pod.GetUID()) {
+				for _, container := range exclusive.PowerContainers {
+					logger.V(5).Info("moving CPUs back to shared pool", "container", container.Name, "profile", container.PowerProfile, "cpus", container.CPUIDs)
+					if err := r.PowerLibrary.GetSharedPool().MoveCpuIDs(container.CPUIDs); err != nil {
+						logger.Error(err, "failed to move CPUs back to shared pool", "container", container.Name, "profile", container.PowerProfile)
+						return ctrl.Result{}, err
+					}
+					deletedCPUIDs = append(deletedCPUIDs, container.CPUIDs...)
+				}
+				break
+			}
+		}
+
+		// Tear down DPDK telemetry and scaling for this pod's CPUs.
+		// No-op for non-DPDK pods: CloseConnection and RemoveCPUScaling
+		// safely ignore entries that don't exist.
+		if r.DPDKTelemetryClient != nil && r.CPUScalingManager != nil {
+			r.DPDKTelemetryClient.CloseConnection(string(pod.GetUID()))
+			r.CPUScalingManager.RemoveCPUScaling(deletedCPUIDs)
+		}
+	}
+
+	// Remove the pod's entry from PowerNodeState via SSA.
+	if err := r.removePowerNodeStatusExclusiveEntry(ctx, nodeName, string(pod.GetUID()), logger); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	return ctrl.Result{}, nil
 }
 

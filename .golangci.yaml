@@ -8,7 +8,7 @@ linters:
     - gocritic       # code style, diagnostics, and performance checks
     - govet          # go vet checks
     - gosec          # security checks
-    # - gocyclo      # TODO: cyclomatic complexity
+    - gocyclo        # cyclomatic complexity
     - ineffassign    # unused variable assignments
     - staticcheck    # comprehensive static analysis
     - unused         # unused code detection

@@ -100,56 +100,7 @@ func (r *PowerProfileReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	logger.V(5).Info("retrieving the power profile instances")
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// First we need to remove the profile from the Power library, this will in turn remove the pool,
-			// which will also move the cores back to the Shared/Default pool and reconfigure them. We then
-			// need to remove the Power Workload from the cluster, which in this case will do nothing as
-			// everything has already been removed. Finally, we remove the Extended Resources from the Node
-			// first we make sure the profile isn't the one used by the shared pool
-			if r.PowerLibrary.GetSharedPool().GetPowerProfile() != nil && req.Name == r.PowerLibrary.GetSharedPool().GetPowerProfile().Name() {
-				err := r.PowerLibrary.GetSharedPool().SetPowerProfile(nil)
-				if err != nil {
-					logger.Error(err, "error setting nil profile")
-					return ctrl.Result{}, err
-				}
-				pool := r.PowerLibrary.GetExclusivePool(req.Name)
-				if pool == nil {
-					notFoundErr := fmt.Errorf("pool not found")
-					logger.Error(notFoundErr, fmt.Sprintf("attempted to remove the non existing pool %s", req.Name))
-					return ctrl.Result{}, notFoundErr
-				}
-				err = pool.Remove()
-				if err != nil {
-					logger.Error(err, "error deleting the power profile from the library")
-					return ctrl.Result{}, err
-				}
-
-				// Remove the profile from PowerNodeState.
-				err = removePowerNodeStatusProfileEntry(ctx, r.Client, nodeName, req.Name, &logger)
-				if err != nil {
-					logger.Error(err, "error removing profile from PowerNodeState")
-					// Pool was already removed, but requeue to retry the status cleanup.
-					return ctrl.Result{RequeueAfter: queuetime}, nil
-				}
-
-				return ctrl.Result{}, nil
-			}
-
-			// Remove the extended resources for this power profile from the node.
-			err = r.removeExtendedResources(ctx, nodeName, req.NamespacedName.Name, &logger)
-			if err != nil {
-				logger.Error(err, "error removing the extended resources from the node")
-				return ctrl.Result{}, err
-			}
-
-			// Remove the profile from PowerNodeState.
-			err = removePowerNodeStatusProfileEntry(ctx, r.Client, nodeName, req.NamespacedName.Name, &logger)
-			if err != nil {
-				logger.Error(err, "error removing profile from PowerNodeState")
-				// Extended resources were already cleaned up, but requeue to retry the status cleanup.
-				return ctrl.Result{RequeueAfter: queuetime}, nil
-			}
-
-			return ctrl.Result{}, nil
+			return r.handleProfileDeletion(ctx, req, nodeName, &logger)
 		}
 
 		// Requeue the request.
@@ -277,6 +228,57 @@ func (r *PowerProfileReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// If the workload already exists then the power profile was just updated and the power library will take care of reconfiguring cores
+	return ctrl.Result{}, nil
+}
+
+// handleProfileDeletion cleans up when a PowerProfile CR is deleted. It removes the profile from the
+// power library (which moves cores back to the shared pool), deletes extended resources from the node,
+// and removes the profile entry from PowerNodeState.
+func (r *PowerProfileReconciler) handleProfileDeletion(ctx context.Context, req ctrl.Request, nodeName string, logger *logr.Logger) (ctrl.Result, error) {
+	// If this profile was used by the shared pool, clear the shared pool profile and remove the exclusive pool.
+	if r.PowerLibrary.GetSharedPool().GetPowerProfile() != nil && req.Name == r.PowerLibrary.GetSharedPool().GetPowerProfile().Name() {
+		err := r.PowerLibrary.GetSharedPool().SetPowerProfile(nil)
+		if err != nil {
+			logger.Error(err, "error setting nil profile")
+			return ctrl.Result{}, err
+		}
+		pool := r.PowerLibrary.GetExclusivePool(req.Name)
+		if pool == nil {
+			notFoundErr := fmt.Errorf("pool not found")
+			logger.Error(notFoundErr, fmt.Sprintf("attempted to remove the non existing pool %s", req.Name))
+			return ctrl.Result{}, notFoundErr
+		}
+		err = pool.Remove()
+		if err != nil {
+			logger.Error(err, "error deleting the power profile from the library")
+			return ctrl.Result{}, err
+		}
+
+		// Remove the profile from PowerNodeState.
+		err = removePowerNodeStatusProfileEntry(ctx, r.Client, nodeName, req.Name, logger)
+		if err != nil {
+			logger.Error(err, "error removing profile from PowerNodeState")
+			return ctrl.Result{RequeueAfter: queuetime}, nil
+		}
+
+		return ctrl.Result{}, nil
+	}
+
+	// Remove the extended resources for this power profile from the node.
+	err := r.removeExtendedResources(ctx, nodeName, req.NamespacedName.Name, logger)
+	if err != nil {
+		logger.Error(err, "error removing the extended resources from the node")
+		return ctrl.Result{}, err
+	}
+
+	// Remove the profile from PowerNodeState.
+	err = removePowerNodeStatusProfileEntry(ctx, r.Client, nodeName, req.NamespacedName.Name, logger)
+	if err != nil {
+		logger.Error(err, "error removing profile from PowerNodeState")
+		// Extended resources were already cleaned up, but requeue to retry the status cleanup.
+		return ctrl.Result{RequeueAfter: queuetime}, nil
+	}
+
 	return ctrl.Result{}, nil
 }
 
