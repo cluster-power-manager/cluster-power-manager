@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func setupCpuCStatesTests(cpufiles map[string]map[string]map[string]string) func() {
+func setupCPUCStatesTests(cpufiles map[string]map[string]map[string]string) func() {
 	origBasePath := basePath
 	basePath = "testing/cpus"
 
@@ -31,7 +31,7 @@ func setupCpuCStatesTests(cpufiles map[string]map[string]map[string]string) func
 				panic(err)
 			}
 			for driver := range states {
-				err := os.WriteFile(filepath.Join(basePath, cStatesDrvPath), []byte(driver), 0644)
+				err := os.WriteFile(filepath.Join(basePath, cStatesDrvPath), []byte(driver), 0o644)
 				if err != nil {
 					panic(err)
 				}
@@ -40,17 +40,14 @@ func setupCpuCStatesTests(cpufiles map[string]map[string]map[string]string) func
 			continue
 		}
 		cpuStatesDir := filepath.Join(basePath, cpu, cStatesDir)
-		err := os.MkdirAll(filepath.Join(cpuStatesDir), os.ModePerm)
+		err := os.MkdirAll(cpuStatesDir, os.ModePerm)
 		if err != nil {
 			panic(err)
 		}
 		for state, props := range states {
-			err := os.Mkdir(filepath.Join(cpuStatesDir, state), os.ModePerm)
-			if err != nil {
-				//panic(err)
-			}
+			_ = os.Mkdir(filepath.Join(cpuStatesDir, state), os.ModePerm)
 			for propFile, value := range props {
-				err := os.WriteFile(filepath.Join(cpuStatesDir, state, propFile), []byte(value), 0644)
+				err := os.WriteFile(filepath.Join(cpuStatesDir, state, propFile), []byte(value), 0o644)
 				if err != nil {
 					panic(err)
 				}
@@ -66,7 +63,7 @@ func setupCpuCStatesTests(cpufiles map[string]map[string]map[string]string) func
 		basePath = origBasePath
 		getNumberOfCpus = origGetNumOfCpusFunc
 		allCPUCStatesInfo = map[uint]cpuCStatesInfo{}
-		featureList[CStatesFeature].err = uninitialisedErr
+		featureList[CStatesFeature].err = errUninitialized
 	}
 }
 
@@ -83,7 +80,7 @@ func Test_mapAvailableCStates(t *testing.T) {
 		"cpu0": states,
 		"cpu1": states,
 	}
-	teardown := setupCpuCStatesTests(cpufiles)
+	teardown := setupCPUCStatesTests(cpufiles)
 
 	err := mapAvailableCStates()
 	assert.NoError(t, err)
@@ -100,7 +97,7 @@ func Test_mapAvailableCStates(t *testing.T) {
 
 	// Test missing name file
 	states["state0"] = nil
-	teardown = setupCpuCStatesTests(cpufiles)
+	teardown = setupCPUCStatesTests(cpufiles)
 	err = mapAvailableCStates()
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "could not read cpu0 C-State 0 name")
@@ -108,7 +105,7 @@ func Test_mapAvailableCStates(t *testing.T) {
 
 	// Test missing latency file
 	states["state0"] = map[string]string{"name": "C0"} // No latency file
-	teardown = setupCpuCStatesTests(cpufiles)
+	teardown = setupCPUCStatesTests(cpufiles)
 
 	err = mapAvailableCStates()
 	assert.Error(t, err)
@@ -117,7 +114,7 @@ func Test_mapAvailableCStates(t *testing.T) {
 }
 
 func TestCStates_preCheckCStates(t *testing.T) {
-	teardown := setupCpuCStatesTests(map[string]map[string]map[string]string{
+	teardown := setupCPUCStatesTests(map[string]map[string]map[string]string{
 		"cpu0":   nil,
 		"Driver": {"intel_idle\n": nil},
 	})
@@ -128,7 +125,7 @@ func TestCStates_preCheckCStates(t *testing.T) {
 	assert.Nil(t, state.FeatureError())
 	teardown()
 
-	teardown = setupCpuCStatesTests(map[string]map[string]map[string]string{
+	teardown = setupCPUCStatesTests(map[string]map[string]map[string]string{
 		"Driver": {"something": nil},
 	})
 	feature := initCStates()
@@ -145,7 +142,7 @@ func TestCpuImpl_applyCStates(t *testing.T) {
 	cpufiles := map[string]map[string]map[string]string{
 		"cpu0": states,
 	}
-	defer setupCpuCStatesTests(cpufiles)()
+	defer setupCPUCStatesTests(cpufiles)()
 
 	allCPUCStatesInfo[0] = map[string]cstateInfo{
 		"C2": {StateNumber: 2, Latency: 10, DefaultStatus: true},
@@ -178,7 +175,7 @@ func TestCpuImpl_applyCStates(t *testing.T) {
 }
 
 func TestValidateCStates(t *testing.T) {
-	defer setupCpuCStatesTests(nil)()
+	defer setupCPUCStatesTests(nil)()
 
 	allCPUCStatesInfo[0] = map[string]cstateInfo{
 		"C0": {StateNumber: 0, Latency: 0, DefaultStatus: true},
@@ -223,7 +220,7 @@ func TestCpuImpl_updateCStates(t *testing.T) {
 	assert.NoError(t, core.updateCStates())
 
 	// Common filesystem setup
-	defer setupCpuCStatesTests(map[string]map[string]map[string]string{
+	defer setupCPUCStatesTests(map[string]map[string]map[string]string{
 		"cpu0": {
 			"state0": {"name": "C0", "disable": "0", "latency": "0"},
 			"state1": {"name": "C1", "disable": "0", "latency": "1"},

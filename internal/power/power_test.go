@@ -58,46 +58,46 @@ func TestFeatureSet_anySupported(t *testing.T) {
 	set[0] = &featureStatus{err: nil}
 	assert.True(t, set.anySupported())
 
-	//nothing supported
+	// nothing supported
 	set[0] = &featureStatus{err: fmt.Errorf("")}
 	set[4] = &featureStatus{err: fmt.Errorf("")}
 	set[2] = &featureStatus{err: fmt.Errorf("")}
 	assert.False(t, set.anySupported())
 }
 
-func TestFeatureSet_isFeatureIdSupported(t *testing.T) {
+func TestFeatureSet_isFeatureIDSupported(t *testing.T) {
 	// non existing
 	set := FeatureSet{}
-	assert.False(t, set.isFeatureIdSupported(0))
+	assert.False(t, set.isFeatureIDSupported(0))
 
 	// error
 	set[0] = &featureStatus{err: fmt.Errorf("")}
-	assert.False(t, set.isFeatureIdSupported(0))
+	assert.False(t, set.isFeatureIDSupported(0))
 
 	// no error
 	set[0] = &featureStatus{err: nil}
-	assert.True(t, set.isFeatureIdSupported(0))
+	assert.True(t, set.isFeatureIDSupported(0))
 }
 
-func TestFeatureSet_getFeatureIdError(t *testing.T) {
+func TestFeatureSet_getFeatureIDError(t *testing.T) {
 	// non existing
 	set := FeatureSet{}
-	assert.ErrorIs(t, undefinederr, set.getFeatureIdError(0))
+	assert.ErrorIs(t, errUndefined, set.getFeatureIDError(0))
 
 	// error
 	set[0] = &featureStatus{err: fmt.Errorf("")}
-	assert.Error(t, set.getFeatureIdError(0))
+	assert.Error(t, set.getFeatureIDError(0))
 
 	// no error
 	set[0] = &featureStatus{err: nil}
-	assert.NoError(t, set.getFeatureIdError(0))
+	assert.NoError(t, set.getFeatureIDError(0))
 }
 
 func TestInitialFeatureList(t *testing.T) {
 	assert.False(t, featureList.anySupported())
 
-	for id, _ := range featureList {
-		assert.ErrorIs(t, featureList.getFeatureIdError(id), uninitialisedErr)
+	for id := range featureList {
+		assert.ErrorIs(t, featureList.getFeatureIDError(id), errUninitialized)
 	}
 }
 
@@ -118,15 +118,15 @@ func TestCreateInstance(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	err = os.WriteFile(filepath.Join(cpudir, packageIdFile), []byte("128"+"\n"), 0664)
+	err = os.WriteFile(filepath.Join(cpudir, packageIDFile), []byte("128"+"\n"), 0o664)
 	if err != nil {
 		panic(err)
 	}
-	err = os.WriteFile(filepath.Join(cpudir, dieIdFile), []byte("0"+"\n"), 0644)
+	err = os.WriteFile(filepath.Join(cpudir, dieIDFile), []byte("0"+"\n"), 0o644)
 	if err != nil {
 		panic(err)
 	}
-	err = os.WriteFile(filepath.Join(cpudir, coreIdFile), []byte("0"+"\n"), 0644)
+	err = os.WriteFile(filepath.Join(cpudir, coreIDFile), []byte("0"+"\n"), 0o644)
 	if err != nil {
 		panic(err)
 	}
@@ -137,8 +137,7 @@ func TestCreateInstance(t *testing.T) {
 	assert.Error(t, err)
 
 	featureList[4] = &featureStatus{initFunc: func() featureStatus { return featureStatus{} }}
-	//host, err = CreateInstance(machineName)
-	host, err = CreateInstanceWithConf(machineName, LibConfig{CpuPath: path, ModulePath: "testing/proc.modules", Cores: uint(1)})
+	host, err = CreateInstanceWithConf(machineName, LibConfig{CPUPath: path, ModulePath: "testing/proc.modules", Cores: uint(1)})
 	assert.NoError(t, err)
 	assert.NotNil(t, host)
 
@@ -194,10 +193,10 @@ func Fuzz_library(f *testing.F) {
 		"cpu6": cpuFreqs,
 		"cpu7": cpuFreqs,
 	}
-	teardownCpu := setupCpuScalingTests(cpuFreqsFiles)
-	teardownCstates := setupCpuCStatesTests(cstatesFiles)
+	teardownCPU := setupCPUScalingTests(cpuFreqsFiles)
+	teardownCstates := setupCPUCStatesTests(cstatesFiles)
 	teardownUncore := setupUncoreTests(uncoreFiles, "intel_uncore_frequency 16384 0 - Live 0xffffffffc09c8000")
-	defer teardownCpu()
+	defer teardownCPU()
 	defer teardownCstates()
 	defer teardownUncore()
 	governorList := []string{"powersave", "performance"}
@@ -220,16 +219,16 @@ func Fuzz_library(f *testing.F) {
 		if node == nil {
 			return
 		}
-		node.GetReservedPool().MoveCpuIDs([]uint{0})
+		node.GetReservedPool().MoveCPUIDs([]uint{0})
 		governor := governorList[int(governorSeed)%len(governorList)]
 		epp := eppList[int(eppSeed)%len(eppList)]
 		pool, _ := node.AddExclusivePool(poolName)
 		cstates := map[string]bool{"C0": true, "C1": false}
 		profile, _ := NewPowerProfile(poolName, &intstr.IntOrString{Type: intstr.Int, IntVal: int32(min)}, &intstr.IntOrString{Type: intstr.Int, IntVal: int32(max)}, governor, epp, cstates, nil)
 		pool.SetPowerProfile(profile)
-		node.GetSharedPool().MoveCpuIDs([]uint{1, 3, 5})
-		node.GetExclusivePool(poolName).MoveCpuIDs([]uint{1, 3, 5})
-		node.GetSharedPool().MoveCpuIDs([]uint{3})
+		node.GetSharedPool().MoveCPUIDs([]uint{1, 3, 5})
+		node.GetExclusivePool(poolName).MoveCPUIDs([]uint{1, 3, 5})
+		node.GetSharedPool().MoveCPUIDs([]uint{3})
 		node.GetExclusivePool(poolName).SetPowerProfile(nil)
 		node.Topology().SetUncore(&uncoreFreq{max: 24000, min: 13000})
 		node.Topology().Package(0).SetUncore(&uncoreFreq{max: 24000, min: 12000})

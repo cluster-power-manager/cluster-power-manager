@@ -30,8 +30,8 @@ type (
 )
 
 func NewUncore(minFreq uint, maxFreq uint) (Uncore, error) {
-	if !featureList.isFeatureIdSupported(UncoreFeature) {
-		return nil, featureList.getFeatureIdError(UncoreFeature)
+	if !featureList.isFeatureIDSupported(UncoreFeature) {
+		return nil, featureList.getFeatureIDError(UncoreFeature)
 	}
 	if minFreq < defaultUncore.min {
 		return nil, fmt.Errorf("specified Min frequency is lower than %d kHZ allowed by the hardware", defaultUncore.min)
@@ -54,18 +54,18 @@ func NewUncore(minFreq uint, maxFreq uint) (Uncore, error) {
 	return &uncoreFreq{min: normalizedMin, max: normalizedMax}, nil
 }
 
-func (u *uncoreFreq) write(pkgId, dieId uint) error {
-	if err := os.WriteFile(
-		path.Join(basePath, fmt.Sprintf(uncorePathFmt, pkgId, dieId), uncoreMaxFreqFile),
+func (u *uncoreFreq) write(pkgID, dieID uint) error {
+	if err := os.WriteFile( //nolint:gosec
+		path.Join(basePath, fmt.Sprintf(uncorePathFmt, pkgID, dieID), uncoreMaxFreqFile),
 		[]byte(fmt.Sprint(u.max)),
-		0644,
+		0o644,
 	); err != nil {
 		return err
 	}
-	if err := os.WriteFile(
-		path.Join(basePath, fmt.Sprintf(uncorePathFmt, pkgId, dieId), uncoreMinFreqFile),
+	if err := os.WriteFile( //nolint:gosec
+		path.Join(basePath, fmt.Sprintf(uncorePathFmt, pkgID, dieID), uncoreMinFreqFile),
 		[]byte(fmt.Sprint(u.min)),
-		0644,
+		0o644,
 	); err != nil {
 		return err
 	}
@@ -89,13 +89,13 @@ func initUncore() featureStatus {
 		return feature
 	}
 	uncoreDirPath := path.Join(basePath, uncoreDirName)
-	uncoreDir, err := os.OpenFile(uncoreDirPath, os.O_RDONLY, 0)
+	uncoreDir, err := os.OpenFile(uncoreDirPath, os.O_RDONLY, 0) //nolint:gosec
 	if err != nil {
 		feature.err = fmt.Errorf("uncore feature error: %w", err)
 		return feature
 	}
 	if _, err := uncoreDir.Readdirnames(1); err != nil {
-		feature.err = fmt.Errorf("uncore feature error: %w", fmt.Errorf("uncore interace dir empty or invalid: %w", err))
+		feature.err = fmt.Errorf("uncore feature error: %w", fmt.Errorf("uncore interface dir empty or invalid: %w", err))
 		return feature
 	}
 
@@ -193,7 +193,7 @@ func (d *cpuDie) getEffectiveUncore() Uncore {
 	return d.parentSocket.getEffectiveUncore()
 }
 
-func readUncoreProperty(pkgID, dieID uint, property string) (uint, error) {
+func readUncoreProperty(pkgID, dieID uint, property string) (uint, error) { //nolint:unparam
 	fullPath := path.Join(basePath, fmt.Sprintf(uncorePathFmt, pkgID, dieID), property)
 	return readUintFromFile(fullPath)
 }

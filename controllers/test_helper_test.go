@@ -94,12 +94,12 @@ func (m *hostMock) GetExclusivePool(poolName string) power.Pool {
 	}
 }
 
-func (m *hostMock) GetAllCpus() *power.CpuList {
+func (m *hostMock) GetAllCpus() *power.CPUList {
 	ret := m.Called().Get(0)
 	if ret == nil {
 		return nil
 	} else {
-		return ret.(*power.CpuList)
+		return ret.(*power.CPUList)
 	}
 }
 
@@ -109,18 +109,18 @@ type poolMock struct {
 }
 
 // createMockPoolWithCPUs creates a poolMock that returns the given CPU IDs
-// and sets up MoveCpuIDs to succeed by default
+// and sets up MoveCPUIDs to succeed by default
 func createMockPoolWithCPUs(cpuIDs []uint) *poolMock {
 	pm := new(poolMock)
-	// Create a CpuList with mock Cpus that return the given IDs
-	cpuList := make(power.CpuList, len(cpuIDs))
+	// Create a CPUList with mock Cpus that return the given IDs
+	cpuList := make(power.CPUList, len(cpuIDs))
 	for i, id := range cpuIDs {
 		cpu := new(coreMock)
 		cpu.On("GetID").Return(id)
 		cpuList[i] = cpu
 	}
 	pm.On("Cpus").Return(&cpuList)
-	pm.On("MoveCpuIDs", mock.Anything).Return(nil)
+	pm.On("MoveCPUIDs", mock.Anything).Return(nil)
 	pm.On("GetPowerProfile").Return(nil)
 	return pm
 }
@@ -137,19 +137,19 @@ func (m *poolMock) Name() string {
 	return m.Called().String(0)
 }
 
-func (m *poolMock) Cpus() *power.CpuList {
+func (m *poolMock) Cpus() *power.CPUList {
 	args := m.Called().Get(0)
 	if args == nil {
 		return nil
 	}
-	return args.(*power.CpuList)
+	return args.(*power.CPUList)
 }
 
-func (m *poolMock) SetCpus(cores power.CpuList) error {
+func (m *poolMock) SetCpus(cores power.CPUList) error {
 	return m.Called(cores).Error(0)
 }
 
-func (m *poolMock) SetCpuIDs(cpuIDs []uint) error { //nolint:staticcheck // ST1003: must match power.Pool interface
+func (m *poolMock) SetCPUIDs(cpuIDs []uint) error {
 	return m.Called(cpuIDs).Error(0)
 }
 
@@ -157,11 +157,11 @@ func (m *poolMock) Remove() error {
 	return m.Called().Error(0)
 }
 
-func (m *poolMock) MoveCpuIDs(coreIDs []uint) error { //nolint:staticcheck // ST1003: must match power.Pool interface
+func (m *poolMock) MoveCPUIDs(coreIDs []uint) error {
 	return m.Called(coreIDs).Error(0)
 }
 
-func (m *poolMock) MoveCpus(cores power.CpuList) error {
+func (m *poolMock) MoveCpus(cores power.CPUList) error {
 	return m.Called(cores).Error(0)
 }
 
@@ -205,7 +205,7 @@ func (m *profMock) Governor() string {
 
 type coreMock struct {
 	mock.Mock
-	power.Cpu
+	power.CPU
 }
 
 func (m *coreMock) SetCStates(cStates power.CStates) error {
@@ -251,26 +251,26 @@ func (m *mockCPUTopology) getEffectiveUncore() power.Uncore {
 	return nil
 }
 
-func (m *mockCPUTopology) addCpu(u uint) (power.Cpu, error) { //nolint:staticcheck // ST1003: must match power.Topology interface
+func (m *mockCPUTopology) addCPU(u uint) (power.CPU, error) {
 	ret := m.Called(u)
 
-	var r0 power.Cpu
+	var r0 power.CPU
 	var r1 error
 
 	if ret.Get(0) != nil {
-		r0 = ret.Get(0).(power.Cpu)
+		r0 = ret.Get(0).(power.CPU)
 	}
 	r1 = ret.Error(1)
 
 	return r0, r1
 }
 
-func (m *mockCPUTopology) CPUs() *power.CpuList {
+func (m *mockCPUTopology) CPUs() *power.CPUList {
 	ret := m.Called()
 
-	var r0 *power.CpuList
+	var r0 *power.CPUList
 	if ret.Get(0) != nil {
-		r0 = ret.Get(0).(*power.CpuList)
+		r0 = ret.Get(0).(*power.CPUList)
 	}
 
 	return r0
@@ -329,26 +329,26 @@ func (m *mockCPUPackage) getEffectiveUncore() power.Uncore {
 	return nil
 }
 
-func (m *mockCPUPackage) addCpu(u uint) (power.Cpu, error) { //nolint:staticcheck // ST1003: must match power.Package interface
+func (m *mockCPUPackage) addCPU(u uint) (power.CPU, error) {
 	ret := m.Called(u)
 
-	var r0 power.Cpu
+	var r0 power.CPU
 	var r1 error
 
 	if ret.Get(0) != nil {
-		r0 = ret.Get(0).(power.Cpu)
+		r0 = ret.Get(0).(power.CPU)
 	}
 	r1 = ret.Error(1)
 
 	return r0, r1
 }
 
-func (m *mockCPUPackage) CPUs() *power.CpuList {
+func (m *mockCPUPackage) CPUs() *power.CPUList {
 	ret := m.Called()
 
-	var r0 *power.CpuList
+	var r0 *power.CPUList
 	if ret.Get(0) != nil {
-		r0 = ret.Get(0).(*power.CpuList)
+		r0 = ret.Get(0).(*power.CPUList)
 	}
 
 	return r0
@@ -405,26 +405,26 @@ func (m *mockCPUDie) getEffectiveUncore() power.Uncore {
 	return nil
 }
 
-func (m *mockCPUDie) addCpu(u uint) (power.Cpu, error) { //nolint:staticcheck // ST1003: must match power.Die interface
+func (m *mockCPUDie) addCPU(u uint) (power.CPU, error) {
 	ret := m.Called(u)
 
-	var r0 power.Cpu
+	var r0 power.CPU
 	var r1 error
 
 	if ret.Get(0) != nil {
-		r0 = ret.Get(0).(power.Cpu)
+		r0 = ret.Get(0).(power.CPU)
 	}
 	r1 = ret.Error(1)
 
 	return r0, r1
 }
 
-func (m *mockCPUDie) CPUs() *power.CpuList {
+func (m *mockCPUDie) CPUs() *power.CPUList {
 	ret := m.Called()
 
-	var r0 *power.CpuList
+	var r0 *power.CPUList
 	if ret.Get(0) != nil {
-		r0 = ret.Get(0).(*power.CpuList)
+		r0 = ret.Get(0).(*power.CPUList)
 	}
 
 	return r0
@@ -454,7 +454,7 @@ func (m *mockCPUDie) Core(id uint) power.Core {
 
 type frequencySetMock struct {
 	mock.Mock
-	power.CpuFrequencySet
+	power.CPUFrequencySet
 }
 
 func (m *frequencySetMock) GetMax() uint {
@@ -623,7 +623,7 @@ func setupDummyFiles(cores int, packages int, diesPerPackage int, cpufiles map[s
 
 	originalGetFromLscpu := power.GetFromLscpu
 	power.GetFromLscpu = power.TestGetFromLscpu
-	host, err := power.CreateInstanceWithConf("test-node", power.LibConfig{CpuPath: "testing/cpus", ModulePath: "testing/proc.modules", Cores: uint(cores)})
+	host, err := power.CreateInstanceWithConf("test-node", power.LibConfig{CPUPath: "testing/cpus", ModulePath: "testing/proc.modules", Cores: uint(cores)})
 	return host, func() {
 		os.RemoveAll(strings.Split(path, "/")[0])
 		power.GetFromLscpu = originalGetFromLscpu

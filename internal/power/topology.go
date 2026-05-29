@@ -4,15 +4,15 @@ import "fmt"
 
 const (
 	cpuTopologyDir = "topology/"
-	packageIdFile  = cpuTopologyDir + "physical_package_id"
-	dieIdFile      = cpuTopologyDir + "die_id"
-	coreIdFile     = cpuTopologyDir + "core_id"
-	clusterIdFile  = cpuTopologyDir + "cluster_id"
+	packageIDFile  = cpuTopologyDir + "physical_package_id"
+	dieIDFile      = cpuTopologyDir + "die_id"
+	coreIDFile     = cpuTopologyDir + "core_id"
+	clusterIDFile  = cpuTopologyDir + "cluster_id"
 )
 
 type topologyTypeObj interface {
-	addCpu(uint) (Cpu, error)
-	CPUs() *CpuList
+	addCPU(uint) (CPU, error)
+	CPUs() *CPUList
 	getID() uint
 }
 
@@ -24,7 +24,7 @@ var coreTypes CoreTypeList
 type (
 	cpuTopology struct {
 		packages     packageList
-		allCpus      CpuList
+		allCpus      CPUList
 		uncore       Uncore
 		architecture string
 	}
@@ -42,34 +42,34 @@ func (s *cpuTopology) getArchitecture() string {
 	return s.architecture
 }
 
-func (s *cpuTopology) addCpu(cpuId uint) (Cpu, error) {
-	var socketId uint
+func (s *cpuTopology) addCPU(cpuID uint) (CPU, error) {
+	var socketID uint
 	var err error
-	var cpu Cpu
+	var cpu CPU
 
-	if socketId, err = readCpuUintProperty(cpuId, packageIdFile); err != nil {
+	if socketID, err = readCPUUintProperty(cpuID, packageIDFile); err != nil {
 		return nil, err
 	}
-	if socket, exists := s.packages[socketId]; exists {
-		cpu, err = socket.addCpu(cpuId)
+	if socket, exists := s.packages[socketID]; exists {
+		cpu, err = socket.addCPU(cpuID)
 	} else {
-		s.packages[socketId] = &cpuPackage{
+		s.packages[socketID] = &cpuPackage{
 			topology: s,
-			id:       socketId,
-			cpus:     CpuList{},
+			id:       socketID,
+			cpus:     CPUList{},
 			dies:     dieList{},
 			clusters: clusterList{},
 		}
-		cpu, err = s.packages[socketId].addCpu(cpuId)
+		cpu, err = s.packages[socketID].addCPU(cpuID)
 	}
 	if err != nil {
 		return nil, err
 	}
-	s.allCpus[cpuId] = cpu
+	s.allCpus[cpuID] = cpu
 	return cpu, err
 }
 
-func (s *cpuTopology) CPUs() *CpuList {
+func (s *cpuTopology) CPUs() *CPUList {
 	return &s.allCpus
 }
 
@@ -103,7 +103,7 @@ type (
 		topology Topology
 		id       uint
 		uncore   Uncore
-		cpus     CpuList
+		cpus     CPUList
 		dies     dieList
 		clusters clusterList
 	}
@@ -130,9 +130,9 @@ func (c *cpuPackage) Die(id uint) Die {
 	return die
 }
 
-func (c *cpuPackage) addCpu(cpuId uint) (Cpu, error) {
+func (c *cpuPackage) addCPU(cpuID uint) (CPU, error) {
 	var err error
-	var cpu Cpu
+	var cpu CPU
 
 	architecture := c.topology.getArchitecture()
 	if architecture == "" {
@@ -140,42 +140,42 @@ func (c *cpuPackage) addCpu(cpuId uint) (Cpu, error) {
 	}
 	switch architecture {
 	case "x86_64":
-		var dieId uint
+		var dieID uint
 
-		if dieId, err = readCpuUintProperty(cpuId, dieIdFile); err != nil {
+		if dieID, err = readCPUUintProperty(cpuID, dieIDFile); err != nil {
 			return nil, err
 		}
 
-		if die, exists := c.dies[dieId]; exists {
-			cpu, err = die.addCpu(cpuId)
+		if die, exists := c.dies[dieID]; exists {
+			cpu, err = die.addCPU(cpuID)
 		} else {
-			c.dies[dieId] = &cpuDie{
+			c.dies[dieID] = &cpuDie{
 				parentSocket: c,
-				id:           dieId,
+				id:           dieID,
 				cores:        coreList{},
-				cpus:         CpuList{},
+				cpus:         CPUList{},
 			}
-			cpu, err = c.dies[dieId].addCpu(cpuId)
+			cpu, err = c.dies[dieID].addCPU(cpuID)
 		}
 		if err != nil {
 			return nil, err
 		}
 	case "aarch64":
-		var clusterId uint
-		if clusterId, err = readCpuUintProperty(cpuId, clusterIdFile); err != nil {
+		var clusterID uint
+		if clusterID, err = readCPUUintProperty(cpuID, clusterIDFile); err != nil {
 			return nil, err
 		}
 
-		if cluster, exists := c.clusters[clusterId]; exists {
-			cpu, err = cluster.addCpu(cpuId)
+		if cluster, exists := c.clusters[clusterID]; exists {
+			cpu, err = cluster.addCPU(cpuID)
 		} else {
-			c.clusters[clusterId] = &cpuCluster{
+			c.clusters[clusterID] = &cpuCluster{
 				parentSocket: c,
-				id:           clusterId,
+				id:           clusterID,
 				cores:        coreList{},
-				cpus:         CpuList{},
+				cpus:         CPUList{},
 			}
-			cpu, err = c.clusters[clusterId].addCpu(cpuId)
+			cpu, err = c.clusters[clusterID].addCPU(cpuID)
 		}
 		if err != nil {
 			return nil, err
@@ -185,7 +185,7 @@ func (c *cpuPackage) addCpu(cpuId uint) (Cpu, error) {
 	return cpu, nil
 }
 
-func (c *cpuPackage) CPUs() *CpuList {
+func (c *cpuPackage) CPUs() *CPUList {
 	return &c.cpus
 }
 
@@ -199,7 +199,7 @@ type (
 		id           uint
 		uncore       Uncore
 		cores        coreList
-		cpus         CpuList
+		cpus         CPUList
 	}
 	Die interface {
 		topologyTypeObj
@@ -224,28 +224,28 @@ func (d *cpuDie) Core(id uint) Core {
 	return core
 }
 
-func (d *cpuDie) CPUs() *CpuList {
+func (d *cpuDie) CPUs() *CPUList {
 	return &d.cpus
 }
 
-func (d *cpuDie) addCpu(cpuId uint) (Cpu, error) {
+func (d *cpuDie) addCPU(cpuID uint) (CPU, error) {
 	var err error
-	var coreId uint
-	var cpu Cpu
+	var coreID uint
+	var cpu CPU
 
-	if coreId, err = readCpuUintProperty(cpuId, coreIdFile); err != nil {
+	if coreID, err = readCPUUintProperty(cpuID, coreIDFile); err != nil {
 		return nil, err
 	}
 
-	if core, exists := d.cores[coreId]; exists {
-		cpu, err = core.addCpu(cpuId)
+	if core, exists := d.cores[coreID]; exists {
+		cpu, err = core.addCPU(cpuID)
 	} else {
-		d.cores[coreId] = &cpuCore{
+		d.cores[coreID] = &cpuCore{
 			parentDie: d,
-			id:        coreId,
-			cpus:      CpuList{},
+			id:        coreID,
+			cpus:      CPUList{},
 		}
-		cpu, err = d.cores[coreId].addCpu(cpuId)
+		cpu, err = d.cores[coreID].addCPU(cpuID)
 	}
 	if err != nil {
 		return nil, err
@@ -263,7 +263,7 @@ type (
 		parentSocket Package
 		id           uint
 		cores        coreList
-		cpus         CpuList
+		cpus         CPUList
 	}
 	Cluster interface {
 		topologyTypeObj
@@ -287,28 +287,28 @@ func (c *cpuCluster) Core(id uint) Core {
 	return core
 }
 
-func (c *cpuCluster) CPUs() *CpuList {
+func (c *cpuCluster) CPUs() *CPUList {
 	return &c.cpus
 }
 
-func (c *cpuCluster) addCpu(cpuId uint) (Cpu, error) {
+func (c *cpuCluster) addCPU(cpuID uint) (CPU, error) {
 	var err error
-	var coreId uint
-	var cpu Cpu
+	var coreID uint
+	var cpu CPU
 
-	if coreId, err = readCpuUintProperty(cpuId, coreIdFile); err != nil {
+	if coreID, err = readCPUUintProperty(cpuID, coreIDFile); err != nil {
 		return nil, err
 	}
 
-	if core, exists := c.cores[coreId]; exists {
-		cpu, err = core.addCpu(cpuId)
+	if core, exists := c.cores[coreID]; exists {
+		cpu, err = core.addCPU(cpuID)
 	} else {
-		c.cores[coreId] = &cpuCore{
+		c.cores[coreID] = &cpuCore{
 			parentCluster: c,
-			id:            coreId,
-			cpus:          CpuList{},
+			id:            coreID,
+			cpus:          CPUList{},
 		}
-		cpu, err = c.cores[coreId].addCpu(cpuId)
+		cpu, err = c.cores[coreID].addCPU(cpuID)
 	}
 	if err != nil {
 		return nil, err
@@ -326,7 +326,7 @@ type (
 		parentDie     Die
 		parentCluster Cluster
 		id            uint
-		cpus          CpuList
+		cpus          CPUList
 		// an array index pointing to a frequency set
 		coreType uint
 	}
@@ -344,8 +344,8 @@ func (c *cpuCore) setType(t uint) {
 	c.coreType = t
 }
 
-func (c *cpuCore) addCpu(cpuId uint) (Cpu, error) {
-	cpu, err := newCpu(cpuId, c)
+func (c *cpuCore) addCPU(cpuID uint) (CPU, error) {
+	cpu, err := newCPU(cpuID, c)
 	if err != nil {
 		return nil, err
 	}
@@ -353,7 +353,7 @@ func (c *cpuCore) addCpu(cpuId uint) (Cpu, error) {
 	return cpu, nil
 }
 
-func (c *cpuCore) CPUs() *CpuList {
+func (c *cpuCore) CPUs() *CPUList {
 	return &c.cpus
 }
 
@@ -372,13 +372,13 @@ type coreList map[uint]Core
 var discoverTopology = func(arch string) (Topology, error) {
 	numOfCores := getNumberOfCpus()
 	topology := &cpuTopology{
-		allCpus:      make(CpuList, numOfCores),
+		allCpus:      make(CPUList, numOfCores),
 		packages:     packageList{},
 		uncore:       defaultUncore,
 		architecture: arch,
 	}
 	for i := uint(0); i < numOfCores; i++ {
-		if _, err := topology.addCpu(i); err != nil {
+		if _, err := topology.addCPU(i); err != nil {
 			return nil, err
 		}
 	}

@@ -21,7 +21,7 @@ func TestConcurrentMoveCpusSetProfile(t *testing.T) {
 	}
 	// reset feature list
 	for _, status := range featureList {
-		status.err = uninitialisedErr
+		status.err = errUninitialized
 	}
 }
 
@@ -73,9 +73,9 @@ func doConcurrentMoveCPUSetProfile(t *testing.T) {
 	}
 
 	// Setup features except for uncore
-	defer setupCpuCStatesTests(cpuCstatesMap)()
+	defer setupCPUCStatesTests(cpuCstatesMap)()
 	defer setupUncoreTests(map[string]map[string]string{}, "")()
-	defer setupCpuScalingTests(cpuConfigAll)()
+	defer setupCPUScalingTests(cpuConfigAll)()
 	defer setupTopologyTest(cpuTopologyMap)()
 
 	originalGetFromLscpu := GetFromLscpu
@@ -121,38 +121,38 @@ func doConcurrentMoveCPUSetProfile(t *testing.T) {
 
 // verifies that the cpu is configured correctly
 // checking is done relative to basePath
-func verifyPowerProfile(cpuId uint, profile Profile) error {
+func verifyPowerProfile(cpuID uint, profile Profile) error {
 	var allerrs []error
 	var err error
 
 	pstates := profile.GetPStates()
-	governor, err := readCpuStringProperty(cpuId, scalingGovFile)
+	governor, err := readCPUStringProperty(cpuID, scalingGovFile)
 	allerrs = append(allerrs, err)
 	if governor != pstates.GetGovernor() {
 		allerrs = append(allerrs, fmt.Errorf("governor mismatch expected : %s, current %s", pstates.GetGovernor(), governor))
 	}
 
 	if pstates.GetEpp() != "" {
-		epp, err := readCpuStringProperty(cpuId, eppFile)
+		epp, err := readCPUStringProperty(cpuID, eppFile)
 		allerrs = append(allerrs, err)
 		if epp != pstates.GetEpp() {
 			allerrs = append(allerrs, fmt.Errorf("epp mismatch expected : %s, current %s", pstates.GetEpp(), epp))
 		}
 	}
 
-	maxFreq, err := readCpuUintProperty(cpuId, scalingMaxFile)
+	maxFreq, err := readCPUUintProperty(cpuID, scalingMaxFile)
 	allerrs = append(allerrs, err)
 	if maxFreq != uint(pstates.GetMaxFreq().IntVal) {
 		allerrs = append(allerrs, fmt.Errorf("maxFreq mismatch expected %d, current %d", pstates.GetMaxFreq().IntVal, maxFreq))
 	}
-	minFreq, err := readCpuUintProperty(cpuId, scalingMinFile)
+	minFreq, err := readCPUUintProperty(cpuID, scalingMinFile)
 	allerrs = append(allerrs, err)
 	if minFreq != uint(pstates.GetMinFreq().IntVal) {
 		allerrs = append(allerrs, fmt.Errorf("minFreq mismatch expected %d, current %d", pstates.GetMinFreq().IntVal, minFreq))
 	}
 
 	for stateName, expected := range profile.GetCStates().States() {
-		actual, err := readCpuStringProperty(cpuId, fmt.Sprintf(cStateDisableFileFmt, allCPUCStatesInfo[cpuId][stateName].StateNumber))
+		actual, err := readCPUStringProperty(cpuID, fmt.Sprintf(cStateDisableFileFmt, allCPUCStatesInfo[cpuID][stateName].StateNumber))
 		allerrs = append(allerrs, err)
 
 		if expected != (actual == "0") {

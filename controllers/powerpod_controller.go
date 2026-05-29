@@ -164,7 +164,7 @@ func (r *PowerPodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			}
 
 			logger.V(5).Info("moving CPUs to exclusive pool", "profile", container.PowerProfile, "container", container.Name, "cpus", coresToAdd)
-			if err := exclusivePool.MoveCpuIDs(coresToAdd); err != nil {
+			if err := exclusivePool.MoveCPUIDs(coresToAdd); err != nil {
 				logger.Error(err, "failed to move CPUs to exclusive pool", "profile", container.PowerProfile, "container", container.Name)
 				container.Errors = append(container.Errors, err.Error())
 				recoveryErrs = append(recoveryErrs, err)
@@ -275,7 +275,7 @@ func (r *PowerPodReconciler) handlePodDeletion(ctx context.Context, pod *corev1.
 			if exclusive.PodUID == string(pod.GetUID()) {
 				for _, container := range exclusive.PowerContainers {
 					logger.V(5).Info("moving CPUs back to shared pool", "container", container.Name, "profile", container.PowerProfile, "cpus", container.CPUIDs)
-					if err := r.PowerLibrary.GetSharedPool().MoveCpuIDs(container.CPUIDs); err != nil {
+					if err := r.PowerLibrary.GetSharedPool().MoveCPUIDs(container.CPUIDs); err != nil {
 						logger.Error(err, "failed to move CPUs back to shared pool", "container", container.Name, "profile", container.PowerProfile)
 						return ctrl.Result{}, err
 					}

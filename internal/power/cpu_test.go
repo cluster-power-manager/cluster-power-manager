@@ -19,7 +19,7 @@ func (m *cpuMock) _setPoolProperty(pool Pool) {
 func (m *cpuMock) consolidate() error {
 	return m.Called().Error(0)
 }
-func (m *cpuMock) consolidate_unsafe() error {
+func (m *cpuMock) consolidateUnsafe() error {
 	return m.Called().Error(0)
 }
 func (m *cpuMock) doSetPool(pool Pool) error {
@@ -80,11 +80,11 @@ func TestNewCore(t *testing.T) {
 			"epp": "some",
 		},
 	}
-	defer setupCpuScalingTests(cpufiles)()
+	defer setupCPUScalingTests(cpufiles)()
 
 	// happy path - ensure values from files are read correctly
 	core := &cpuCore{}
-	cpu, err := newCpu(0, core)
+	cpu, err := newCPU(0, core)
 	assert.NoError(t, err)
 
 	assert.NotNil(t, cpu.(*cpuImpl).mutex)
@@ -97,7 +97,7 @@ func TestNewCore(t *testing.T) {
 	// now "break" scaling driver by setting a feature error
 	featureList[FrequencyScalingFeature].err = fmt.Errorf("some error")
 
-	cpu, err = newCpu(0, nil)
+	cpu, err = newCPU(0, nil)
 
 	assert.NoError(t, err)
 
@@ -118,7 +118,7 @@ func TestCpuImpl_SetPool(t *testing.T) {
 	sharedPool.On("isExclusive").Return(false)
 	sharedPool.On("getHost").Return(host)
 	sharedPool.On("Name").Return("shared")
-	sharedPoolCores := make(CpuList, 8)
+	sharedPoolCores := make(CPUList, 8)
 	sharedPool.On("Cpus").Return(&sharedPoolCores)
 	sharedPool.On("poolMutex").Return(&sync.Mutex{})
 
@@ -126,7 +126,7 @@ func TestCpuImpl_SetPool(t *testing.T) {
 	reservedPool.On("isExclusive").Return(false)
 	reservedPool.On("getHost").Return(host)
 	reservedPool.On("Name").Return("reserved")
-	reservedPoolCores := make(CpuList, 8)
+	reservedPoolCores := make(CPUList, 8)
 	reservedPool.On("Cpus").Return(&reservedPoolCores)
 	reservedPool.On("poolMutex").Return(&sync.Mutex{})
 
@@ -137,7 +137,7 @@ func TestCpuImpl_SetPool(t *testing.T) {
 	exclusivePool1.On("isExclusive").Return(true)
 	exclusivePool1.On("getHost").Return(host)
 	exclusivePool1.On("Name").Return("excl1")
-	exclusivePool1Cores := make(CpuList, 8)
+	exclusivePool1Cores := make(CPUList, 8)
 	exclusivePool1.On("Cpus").Return(&exclusivePool1Cores)
 	exclusivePool1.On("poolMutex").Return(&sync.Mutex{})
 
@@ -145,7 +145,7 @@ func TestCpuImpl_SetPool(t *testing.T) {
 	exclusivePool2.On("isExclusive").Return(true)
 	exclusivePool2.On("getHost").Return(host)
 	exclusivePool2.On("Name").Return("excl2")
-	exclusivePool2Cores := make(CpuList, 8)
+	exclusivePool2Cores := make(CPUList, 8)
 	exclusivePool2.On("Cpus").Return(&exclusivePool2Cores)
 	exclusivePool2.On("poolMutex").Return(&sync.Mutex{})
 
@@ -277,7 +277,7 @@ func TestCpuImpl_SetPool(t *testing.T) {
 	assert.True(t, cpu.pool == exclusivePool1)
 	cpuMutex.AssertExpectations(t)
 
-	//exclusive to another exclusive
+	// exclusive to another exclusive
 	cpuMutex = new(mutexMock)
 	cpuMutex.On("Unlock").Return().NotBefore(
 		cpuMutex.On("Lock").Return(),
@@ -317,8 +317,8 @@ func TestCpuImpl_doSetPool(t *testing.T) {
 	cpu = &cpuImpl{
 		pool: sourcePool,
 	}
-	sourcePool.On("Cpus").Return(&CpuList{cpu})
-	targetPool.On("Cpus").Return(&CpuList{})
+	sourcePool.On("Cpus").Return(&CPUList{cpu})
+	targetPool.On("Cpus").Return(&CPUList{})
 
 	assert.NoError(t, cpu.doSetPool(targetPool))
 	assert.True(t, cpu.pool == targetPool)
@@ -344,8 +344,8 @@ func TestCpuImpl_doSetPool(t *testing.T) {
 	cpu = &cpuImpl{
 		pool: sourcePool,
 	}
-	sourcePool.On("Cpus").Return(&CpuList{})
-	targetPool.On("Cpus").Return(&CpuList{})
+	sourcePool.On("Cpus").Return(&CPUList{})
+	targetPool.On("Cpus").Return(&CPUList{})
 
 	assert.ErrorContains(t, cpu.doSetPool(targetPool), "not in pool")
 	assert.True(t, cpu.pool == sourcePool)
@@ -354,7 +354,7 @@ func TestCpuImpl_doSetPool(t *testing.T) {
 }
 
 func TestCoreList_IDs(t *testing.T) {
-	cpus := CpuList{}
+	cpus := CPUList{}
 	var expectedIDs []uint
 	for i := uint(0); i < 5; i++ {
 		mockedCore := new(cpuMock)
@@ -367,7 +367,7 @@ func TestCoreList_IDs(t *testing.T) {
 
 func TestCoreList_ByID(t *testing.T) {
 	// test for quick get to skip iteration over list when index == coreId
-	cpus := CpuList{}
+	cpus := CPUList{}
 	for i := uint(0); i < 5; i++ {
 		mockedCore := new(cpuMock)
 		mockedCore.On("GetID").Return(i)
@@ -379,7 +379,7 @@ func TestCoreList_ByID(t *testing.T) {
 	cpus[1].(*cpuMock).AssertNotCalled(t, "GetID")
 
 	// test for when index != coreID and have to iterate
-	cpus = CpuList{}
+	cpus = CPUList{}
 	for _, u := range []uint{56, 1, 6, 99, 2, 11} {
 		mocked := new(cpuMock)
 		mocked.On("GetID").Return(u)
@@ -393,17 +393,17 @@ func TestCoreList_ByID(t *testing.T) {
 }
 
 func TestCoreList_ManyByIDs(t *testing.T) {
-	cpus := CpuList{}
+	cpus := CPUList{}
 	for i := uint(0); i < 5; i++ {
 		mockedCore := new(cpuMock)
 		mockedCore.On("GetID").Return(i)
 		cpus = append(cpus, mockedCore)
 	}
 	returnedList, err := cpus.ManyByIDs([]uint{1, 3})
-	assert.ElementsMatch(t, returnedList, []Cpu{cpus[1], cpus[3]})
+	assert.ElementsMatch(t, returnedList, []CPU{cpus[1], cpus[3]})
 	assert.NoError(t, err)
 
-	// out of range#
-	returnedList, err = cpus.ManyByIDs([]uint{6})
+	// out of range
+	_, err = cpus.ManyByIDs([]uint{6})
 	assert.Error(t, err)
 }

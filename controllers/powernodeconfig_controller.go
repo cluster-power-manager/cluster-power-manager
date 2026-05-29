@@ -259,7 +259,7 @@ func (r *PowerNodeConfigReconciler) configureSharedPool(config *powerv1alpha1.Po
 	}
 	// Move all reserved CPUs into the shared pool so they inherit the profile.
 	// configureReservedPools will then move specific CPUs back to reserved.
-	if err := r.PowerLibrary.GetReservedPool().SetCpuIDs([]uint{}); err != nil {
+	if err := r.PowerLibrary.GetReservedPool().SetCPUIDs([]uint{}); err != nil {
 		return fmt.Errorf("failed to clear reserved pool: %w", err)
 	}
 	logger.V(5).Info("configured shared pool profile", "profile", config.Spec.SharedPowerProfile)
@@ -287,14 +287,14 @@ func (r *PowerNodeConfigReconciler) configureReservedPools(
 	var reservedProfileCPUs []powerv1alpha1.PowerProfileCPUs
 	for _, rc := range config.Spec.ReservedCPUs {
 		// Move cores to shared first to prevent exclusive→reserved conflicts.
-		if err := r.PowerLibrary.GetSharedPool().MoveCpuIDs(rc.Cores); err != nil {
+		if err := r.PowerLibrary.GetSharedPool().MoveCPUIDs(rc.Cores); err != nil {
 			return reservedProfileCPUs, []error{fmt.Errorf("failed to move reserved cores to shared: %w", err)}
 		}
 		if rc.PowerProfile != "" {
 			if err := r.createReservedPool(rc, nodeName); err != nil {
 				reservedErrors = append(reservedErrors, err)
 				// Fallback: move to default reserved pool.
-				if err := r.PowerLibrary.GetReservedPool().MoveCpuIDs(rc.Cores); err != nil {
+				if err := r.PowerLibrary.GetReservedPool().MoveCPUIDs(rc.Cores); err != nil {
 					return reservedProfileCPUs, []error{fmt.Errorf("failed to move cores to reserved: %w", err)}
 				}
 				reservedProfileCPUs = append(reservedProfileCPUs, powerv1alpha1.PowerProfileCPUs{
@@ -309,7 +309,7 @@ func (r *PowerNodeConfigReconciler) configureReservedPools(
 				})
 			}
 		} else {
-			if err := r.PowerLibrary.GetReservedPool().MoveCpuIDs(rc.Cores); err != nil {
+			if err := r.PowerLibrary.GetReservedPool().MoveCPUIDs(rc.Cores); err != nil {
 				return reservedProfileCPUs, []error{fmt.Errorf("failed to move cores to reserved: %w", err)}
 			}
 			reservedProfileCPUs = append(reservedProfileCPUs, powerv1alpha1.PowerProfileCPUs{
@@ -357,7 +357,7 @@ func (r *PowerNodeConfigReconciler) createReservedPool(rc powerv1alpha1.Reserved
 		_ = pseudoPool.Remove()
 		return fmt.Errorf("failed to set profile for reserved cores: %w", err)
 	}
-	if err := pseudoPool.SetCpuIDs(rc.Cores); err != nil {
+	if err := pseudoPool.SetCPUIDs(rc.Cores); err != nil {
 		_ = pseudoPool.Remove()
 		return fmt.Errorf("failed to move cores to reserved pool: %w", err)
 	}

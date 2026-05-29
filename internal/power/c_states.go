@@ -109,20 +109,20 @@ func mapAvailableCStates() error {
 			}
 
 			// Read c-state name from sysfs
-			stateName, err := readCpuStringProperty(cpuID, fmt.Sprintf(cStateNameFileFmt, stateNumber))
+			stateName, err := readCPUStringProperty(cpuID, fmt.Sprintf(cStateNameFileFmt, stateNumber))
 			if err != nil {
 				return fmt.Errorf("could not read cpu%d C-State %d name: %w", cpuID, stateNumber, err)
 			}
 
 			// Read c-state latency from sysfs
-			latency, err := readCpuUintProperty(cpuID, fmt.Sprintf(cStateLatencyFileFmt, stateNumber))
+			latency, err := readCPUUintProperty(cpuID, fmt.Sprintf(cStateLatencyFileFmt, stateNumber))
 			if err != nil {
 				return fmt.Errorf("could not read cpu%d C-State %d latency: %w", cpuID, stateNumber, err)
 			}
 
 			// Get default c-state status from default_status sysfs file if it exists, otherwise set to true
 			defaultStatus := true
-			defaultStatusStr, err := readCpuStringProperty(cpuID, fmt.Sprintf(cStatesDefaultStatusFileFmt, stateNumber))
+			defaultStatusStr, err := readCPUStringProperty(cpuID, fmt.Sprintf(cStatesDefaultStatusFileFmt, stateNumber))
 			if err != nil && !os.IsNotExist(err) {
 				return fmt.Errorf("could not read cpu%d C-State %d default status file: %w", cpuID, stateNumber, err)
 			} else if err == nil {
@@ -235,7 +235,7 @@ func (cpu *cpuImpl) applyCStates(desiredCStates CStates) error {
 		} else {
 			content[0] = '1' // write '1' to disable the c state
 		}
-		if err := os.WriteFile(stateFilePath, content, 0644); err != nil {
+		if err := os.WriteFile(stateFilePath, content, 0o644); err != nil { //nolint:gosec
 			return fmt.Errorf("could not apply cstate %s on cpu %d: %w", stateName, cpu.id, err)
 		}
 	}

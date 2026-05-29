@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func setupCpuScalingTests(cpufiles map[string]map[string]string) func() {
+func setupCPUScalingTests(cpufiles map[string]map[string]string) func() {
 	origBasePath := basePath
 	basePath = "testing/cpus"
 	allCPUDefaultPStatesInfoCopy := allCPUDefaultPStatesInfo
@@ -69,24 +69,24 @@ func setupCpuScalingTests(cpufiles map[string]map[string]string) func() {
 		for prop, value := range cpuDetails {
 			switch prop {
 			case "driver":
-				os.WriteFile(filepath.Join(cpudir, pStatesDrvFile), []byte(value+"\n"), 0664)
+				os.WriteFile(filepath.Join(cpudir, pStatesDrvFile), []byte(value+"\n"), 0o664)
 			case "max":
-				os.WriteFile(filepath.Join(cpudir, scalingMaxFile), []byte(value+"\n"), 0644)
-				os.WriteFile(filepath.Join(cpudir, cpuMaxFreqFile), []byte(value+"\n"), 0644)
+				os.WriteFile(filepath.Join(cpudir, scalingMaxFile), []byte(value+"\n"), 0o644)
+				os.WriteFile(filepath.Join(cpudir, cpuMaxFreqFile), []byte(value+"\n"), 0o644)
 			case "min":
-				os.WriteFile(filepath.Join(cpudir, scalingMinFile), []byte(value+"\n"), 0644)
-				os.WriteFile(filepath.Join(cpudir, cpuMinFreqFile), []byte(value+"\n"), 0644)
+				os.WriteFile(filepath.Join(cpudir, scalingMinFile), []byte(value+"\n"), 0o644)
+				os.WriteFile(filepath.Join(cpudir, cpuMinFreqFile), []byte(value+"\n"), 0o644)
 			case "package":
-				os.WriteFile(filepath.Join(cpudir, packageIdFile), []byte(value+"\n"), 0644)
+				os.WriteFile(filepath.Join(cpudir, packageIDFile), []byte(value+"\n"), 0o644)
 			case "die":
-				os.WriteFile(filepath.Join(cpudir, dieIdFile), []byte(value+"\n"), 0644)
-				os.WriteFile(filepath.Join(cpudir, coreIdFile), []byte(cpuName[3:]+"\n"), 0644)
+				os.WriteFile(filepath.Join(cpudir, dieIDFile), []byte(value+"\n"), 0o644)
+				os.WriteFile(filepath.Join(cpudir, coreIDFile), []byte(cpuName[3:]+"\n"), 0o644)
 			case "epp":
-				os.WriteFile(filepath.Join(cpudir, eppFile), []byte(value+"\n"), 0644)
+				os.WriteFile(filepath.Join(cpudir, eppFile), []byte(value+"\n"), 0o644)
 			case "governor":
-				os.WriteFile(filepath.Join(cpudir, scalingGovFile), []byte(value+"\n"), 0644)
+				os.WriteFile(filepath.Join(cpudir, scalingGovFile), []byte(value+"\n"), 0o644)
 			case "available_governors":
-				os.WriteFile(filepath.Join(cpudir, availGovFile), []byte(value+"\n"), 0644)
+				os.WriteFile(filepath.Join(cpudir, availGovFile), []byte(value+"\n"), 0o644)
 			}
 		}
 	}
@@ -98,7 +98,7 @@ func setupCpuScalingTests(cpufiles map[string]map[string]string) func() {
 		// revert get number of system cpus function
 		getNumberOfCpus = origGetNumOfCpusFunc
 		// revert scaling driver feature to un initialised state
-		featureList[FrequencyScalingFeature].err = uninitialisedErr
+		featureList[FrequencyScalingFeature].err = errUninitialized
 		coreTypes = typeCopy
 		// revert default pstates
 		allCPUDefaultPStatesInfo = allCPUDefaultPStatesInfoCopy
@@ -123,7 +123,7 @@ func TestPreChecksScalingDriver(t *testing.T) {
 	assert.Equal(t, epp.name, "Energy-Performance-Preference")
 	assert.ErrorContains(t, epp.err, "EPP file cpufreq/energy_performance_preference does not exist")
 	basePath = origpath
-	teardown := setupCpuScalingTests(map[string]map[string]string{
+	teardown := setupCPUScalingTests(map[string]map[string]string{
 		"cpu0": {
 			"min":                 "111",
 			"max":                 "999",
@@ -140,7 +140,7 @@ func TestPreChecksScalingDriver(t *testing.T) {
 	assert.NoError(t, epp.err)
 
 	teardown()
-	defer setupCpuScalingTests(map[string]map[string]string{
+	defer setupCPUScalingTests(map[string]map[string]string{
 		"cpu0": {
 			"driver": "some_unsupported_driver",
 		},
@@ -150,7 +150,7 @@ func TestPreChecksScalingDriver(t *testing.T) {
 	assert.ErrorContains(t, pStates.err, "unsupported")
 	assert.Equal(t, pStates.driver, "some_unsupported_driver")
 	teardown()
-	defer setupCpuScalingTests(map[string]map[string]string{
+	defer setupCPUScalingTests(map[string]map[string]string{
 		"cpu0": {
 			"driver":              "acpi-cpufreq",
 			"available_governors": "powersave",
@@ -171,14 +171,14 @@ func TestCoreImpl_updateFreqValues(t *testing.T) {
 		minFreqToSet = 1000
 	)
 	typeCopy := coreTypes
-	coreTypes = CoreTypeList{&CpuFrequencySet{min: minFreqToSet, max: maxDefault}}
+	coreTypes = CoreTypeList{&CPUFrequencySet{min: minFreqToSet, max: maxDefault}}
 	defer func() { coreTypes = typeCopy }()
 
 	core = &cpuImpl{}
 	// p-states not supported
 	assert.NoError(t, core.updateFrequencies())
 
-	teardown := setupCpuScalingTests(map[string]map[string]string{
+	teardown := setupCPUScalingTests(map[string]map[string]string{
 		"cpu0": {
 			"max": fmt.Sprint(maxDefault),
 			"min": fmt.Sprint(minFreqToSet),
@@ -229,10 +229,10 @@ func TestCoreImpl_setPstatsValues(t *testing.T) {
 	featureList[FrequencyScalingFeature].err = nil
 	featureList[EPPFeature].err = nil
 	typeCopy := coreTypes
-	coreTypes = CoreTypeList{&CpuFrequencySet{min: 1000, max: 9000}}
+	coreTypes = CoreTypeList{&CPUFrequencySet{min: 1000, max: 9000}}
 	defer func() { coreTypes = typeCopy }()
-	defer func() { featureList[EPPFeature].err = uninitialisedErr }()
-	defer func() { featureList[FrequencyScalingFeature].err = uninitialisedErr }()
+	defer func() { featureList[EPPFeature].err = errUninitialized }()
+	defer func() { featureList[FrequencyScalingFeature].err = errUninitialized }()
 
 	poolmk := new(poolMock)
 	host := new(hostMock)
@@ -244,7 +244,7 @@ func TestCoreImpl_setPstatsValues(t *testing.T) {
 		pool: poolmk,
 	}
 
-	teardown := setupCpuScalingTests(map[string]map[string]string{
+	teardown := setupCPUScalingTests(map[string]map[string]string{
 		"cpu0": {
 			"governor": "performance",
 			"max":      "9999",
@@ -298,7 +298,7 @@ func TestCpuImpl_setDriverValues(t *testing.T) {
 	featureList[FrequencyScalingFeature].err = nil
 	featureList[EPPFeature].err = nil
 	typeCopy := coreTypes
-	coreTypes = CoreTypeList{&CpuFrequencySet{min: minFreqDefault, max: maxFreqDefault}}
+	coreTypes = CoreTypeList{&CPUFrequencySet{min: minFreqDefault, max: maxFreqDefault}}
 	allCPUDefaultPStatesInfoCopy := allCPUDefaultPStatesInfo
 	allCPUDefaultPStatesInfo = make([]pstatesImpl, 1)
 	allCPUDefaultPStatesInfo[0] = pstatesImpl{
@@ -311,11 +311,11 @@ func TestCpuImpl_setDriverValues(t *testing.T) {
 	defer func() {
 		coreTypes = typeCopy
 		allCPUDefaultPStatesInfo = allCPUDefaultPStatesInfoCopy
-		featureList[FrequencyScalingFeature].err = uninitialisedErr
-		featureList[EPPFeature].err = uninitialisedErr
+		featureList[FrequencyScalingFeature].err = errUninitialized
+		featureList[EPPFeature].err = errUninitialized
 	}()
 
-	teardown := setupCpuScalingTests(map[string]map[string]string{
+	teardown := setupCPUScalingTests(map[string]map[string]string{
 		"cpu0": {
 			"governor": "powersave",
 			"max":      fmt.Sprint(maxFreqDefault),
@@ -485,7 +485,7 @@ func TestCpuImpl_setDriverValues_FileWriteErrors(t *testing.T) {
 	featureList[FrequencyScalingFeature].err = nil
 	featureList[EPPFeature].err = nil
 	typeCopy := coreTypes
-	coreTypes = CoreTypeList{&CpuFrequencySet{min: 1000, max: 3000}}
+	coreTypes = CoreTypeList{&CPUFrequencySet{min: 1000, max: 3000}}
 	allCPUDefaultPStatesInfoCopy := allCPUDefaultPStatesInfo
 	allCPUDefaultPStatesInfo = make([]pstatesImpl, 1)
 	allCPUDefaultPStatesInfo[0] = pstatesImpl{
@@ -498,8 +498,8 @@ func TestCpuImpl_setDriverValues_FileWriteErrors(t *testing.T) {
 	defer func() {
 		coreTypes = typeCopy
 		allCPUDefaultPStatesInfo = allCPUDefaultPStatesInfoCopy
-		featureList[FrequencyScalingFeature].err = uninitialisedErr
-		featureList[EPPFeature].err = uninitialisedErr
+		featureList[FrequencyScalingFeature].err = errUninitialized
+		featureList[EPPFeature].err = errUninitialized
 	}()
 
 	// Create CPU instance
@@ -553,9 +553,9 @@ func TestCpuImpl_updateFrequencies_MultipleCoreTypes(t *testing.T) {
 
 	// Create 3 different core types: P-core, E-core, Shared
 	coreTypes = CoreTypeList{
-		&CpuFrequencySet{min: pCoreMinFreq, max: pCoreMaxFreq},   // Type 0: P-core
-		&CpuFrequencySet{min: eCoreMinFreq, max: eCoreMaxFreq},   // Type 1: E-core
-		&CpuFrequencySet{min: sharedMinFreq, max: sharedMaxFreq}, // Type 2: Shared
+		&CPUFrequencySet{min: pCoreMinFreq, max: pCoreMaxFreq},   // Type 0: P-core
+		&CPUFrequencySet{min: eCoreMinFreq, max: eCoreMaxFreq},   // Type 1: E-core
+		&CPUFrequencySet{min: sharedMinFreq, max: sharedMaxFreq}, // Type 2: Shared
 	}
 
 	allCPUDefaultPStatesInfoCopy := allCPUDefaultPStatesInfo
@@ -563,11 +563,11 @@ func TestCpuImpl_updateFrequencies_MultipleCoreTypes(t *testing.T) {
 	defer func() {
 		coreTypes = typeCopy
 		allCPUDefaultPStatesInfo = allCPUDefaultPStatesInfoCopy
-		featureList[FrequencyScalingFeature].err = uninitialisedErr
-		featureList[EPPFeature].err = uninitialisedErr
+		featureList[FrequencyScalingFeature].err = errUninitialized
+		featureList[EPPFeature].err = errUninitialized
 	}()
 
-	teardown := setupCpuScalingTests(map[string]map[string]string{
+	teardown := setupCPUScalingTests(map[string]map[string]string{
 		"cpu0": { // P-core
 			"governor": "powersave",
 			"max":      fmt.Sprint(pCoreMaxFreq),
@@ -589,7 +589,7 @@ func TestCpuImpl_updateFrequencies_MultipleCoreTypes(t *testing.T) {
 	})
 	defer teardown()
 
-	// setupCpuScalingTests now automatically initializes allCPUDefaultPStatesInfo for all CPUs
+	// setupCPUScalingTests now automatically initializes allCPUDefaultPStatesInfo for all CPUs
 
 	// Create CPU instance for E-core (CPU 1)
 	poolMock := new(poolMock)

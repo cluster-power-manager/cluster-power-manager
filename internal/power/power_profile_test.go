@@ -11,7 +11,7 @@ import (
 func TestNewProfile(t *testing.T) {
 	// Save and initialize coreTypes for testing
 	typeCopy := coreTypes
-	coreTypes = CoreTypeList{&CpuFrequencySet{min: 10000, max: 1000000}} // 10MHz - 1GHz
+	coreTypes = CoreTypeList{&CPUFrequencySet{min: 10000, max: 1000000}} // 10MHz - 1GHz
 	defer func() { coreTypes = typeCopy }()
 
 	oldgovs := availableGovs
@@ -33,15 +33,15 @@ func TestNewProfile(t *testing.T) {
 		map[string]bool{},
 		nil,
 	)
-	assert.ErrorIs(t, err, uninitialisedErr)
+	assert.ErrorIs(t, err, errUninitialized)
 	assert.Nil(t, profile)
 
 	featureList[FrequencyScalingFeature].err = nil
 	featureList[EPPFeature].err = nil
 	featureList[CStatesFeature].err = nil
-	defer func() { featureList[FrequencyScalingFeature].err = uninitialisedErr }()
-	defer func() { featureList[EPPFeature].err = uninitialisedErr }()
-	defer func() { featureList[CStatesFeature].err = uninitialisedErr }()
+	defer func() { featureList[FrequencyScalingFeature].err = errUninitialized }()
+	defer func() { featureList[EPPFeature].err = errUninitialized }()
+	defer func() { featureList[CStatesFeature].err = errUninitialized }()
 	defer func() { availableGovs = oldgovs }()
 
 	profile, err = NewPowerProfile(
@@ -143,7 +143,7 @@ func TestNewProfile(t *testing.T) {
 func TestAdjustMinMaxFreq(t *testing.T) {
 	// Save and restore original coreTypes
 	typeCopy := coreTypes
-	coreTypes = CoreTypeList{&CpuFrequencySet{min: 10000, max: 1000000}} // 10MHz - 1GHz
+	coreTypes = CoreTypeList{&CPUFrequencySet{min: 10000, max: 1000000}} // 10MHz - 1GHz
 	defer func() { coreTypes = typeCopy }()
 
 	tests := []struct {
@@ -277,7 +277,7 @@ func TestAdjustMinMaxFreq(t *testing.T) {
 func TestValidatePStatesErrors(t *testing.T) {
 	// Save and restore original coreTypes and availableGovs
 	typeCopy := coreTypes
-	coreTypes = CoreTypeList{&CpuFrequencySet{min: 100000, max: 3000000}} // 100MHz - 3GHz
+	coreTypes = CoreTypeList{&CPUFrequencySet{min: 100000, max: 3000000}} // 100MHz - 3GHz
 	defer func() { coreTypes = typeCopy }()
 
 	oldgovs := availableGovs

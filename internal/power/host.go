@@ -12,7 +12,7 @@ import (
 type hostImpl struct {
 	name           string
 	architecture   string
-	vendorId       string
+	vendorID       string
 	exclusivePools PoolList
 	reservedPool   Pool
 	sharedPool     Pool
@@ -39,7 +39,7 @@ type Host interface {
 	GetExclusivePool(poolName string) Pool
 	GetAllExclusivePools() *PoolList
 
-	GetAllCpus() *CpuList
+	GetAllCpus() *CPUList
 	GetFreqRanges() CoreTypeList
 	Topology() Topology
 	// returns number of distinct core types
@@ -59,7 +59,7 @@ func initHost(nodeName string) (Host, error) {
 		return nil, fmt.Errorf("failed to set host architecture: %w", err)
 	}
 	if err := host.SetVendorID(); err != nil {
-		return nil, fmt.Errorf("failed to set host vendorId: %w", err)
+		return nil, fmt.Errorf("failed to set host vendorID: %w", err)
 	}
 
 	// create predefined pools
@@ -70,7 +70,7 @@ func initHost(nodeName string) (Host, error) {
 	}}
 	host.sharedPool = &sharedPoolType{poolImpl{
 		name:  sharedPoolName,
-		cpus:  CpuList{},
+		cpus:  CPUList{},
 		mutex: &sync.Mutex{},
 		host:  host,
 	}}
@@ -90,7 +90,7 @@ func initHost(nodeName string) (Host, error) {
 
 	// create a shallow copy of pointers, changes to underlying cpu object will reflect in both lists,
 	// changes to each list will not affect the other
-	host.reservedPool.(*reservedPoolType).cpus = make(CpuList, len(*topology.CPUs()))
+	host.reservedPool.(*reservedPoolType).cpus = make(CPUList, len(*topology.CPUs()))
 	copy(host.reservedPool.(*reservedPoolType).cpus, *topology.CPUs())
 	return host, nil
 }
@@ -121,23 +121,23 @@ func (host *hostImpl) GetArchitecture() string {
 }
 
 func (host *hostImpl) SetVendorID() error {
-	vendorId, err := GetFromLscpu("^Vendor ID:")
+	vendorID, err := GetFromLscpu("^Vendor ID:")
 	if err != nil {
 		return fmt.Errorf("failed to get VendorID from lscpu: %w", err)
 	}
-	host.vendorId = vendorId
+	host.vendorID = vendorID
 	return nil
 }
 
 func (host *hostImpl) GetVendorID() string {
-	return host.vendorId
+	return host.vendorID
 }
 
 // GetFromLscpu returns the value of a certain key from the lscpu output.
 var GetFromLscpu = func(regex string) (string, error) {
 	regexp.MustCompile(regex)
 	cmdStr := fmt.Sprintf("lscpu | grep -Ew \"%s\" | cut -d ':' -f 2", regex)
-	cmd := exec.Command("bash", "-c", cmdStr)
+	cmd := exec.Command("bash", "-c", cmdStr) //nolint:gosec
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	output, err := cmd.Output()
@@ -165,7 +165,7 @@ func (host *hostImpl) AddExclusivePool(poolName string) (Pool, error) {
 	var pool Pool = &exclusivePoolType{poolImpl{
 		name:  poolName,
 		mutex: &sync.Mutex{},
-		cpus:  make([]Cpu, 0),
+		cpus:  make([]CPU, 0),
 		host:  host,
 	}}
 
@@ -188,7 +188,7 @@ func (host *hostImpl) GetFeaturesInfo() FeatureSet {
 	return *host.featureStates
 }
 
-func (host *hostImpl) GetAllCpus() *CpuList {
+func (host *hostImpl) GetAllCpus() *CPUList {
 	return host.topology.CPUs()
 }
 

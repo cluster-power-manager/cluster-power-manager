@@ -11,23 +11,23 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type mockCpuTopology struct {
+type mockCPUTopology struct {
 	mock.Mock
 }
 
-func (m *mockCpuTopology) getID() uint {
+func (m *mockCPUTopology) getID() uint {
 	return m.Called().Get(0).(uint)
 }
 
-func (m *mockCpuTopology) SetUncore(uncore Uncore) error {
+func (m *mockCPUTopology) SetUncore(uncore Uncore) error {
 	return m.Called(uncore).Error(0)
 }
 
-func (m *mockCpuTopology) applyUncore() error {
+func (m *mockCPUTopology) applyUncore() error {
 	return m.Called().Error(0)
 }
 
-func (m *mockCpuTopology) getEffectiveUncore() Uncore {
+func (m *mockCPUTopology) getEffectiveUncore() Uncore {
 	ret := m.Called()
 	if ret.Get(0) != nil {
 		return ret.Get(0).(Uncore)
@@ -35,7 +35,7 @@ func (m *mockCpuTopology) getEffectiveUncore() Uncore {
 	return nil
 }
 
-func (m *mockCpuTopology) getArchitecture() string {
+func (m *mockCPUTopology) getArchitecture() string {
 	ret := m.Called()
 	if ret.Get(0) != nil {
 		return ret.Get(0).(string)
@@ -43,32 +43,32 @@ func (m *mockCpuTopology) getArchitecture() string {
 	return ""
 }
 
-func (m *mockCpuTopology) addCpu(u uint) (Cpu, error) {
+func (m *mockCPUTopology) addCPU(u uint) (CPU, error) {
 	ret := m.Called(u)
 
-	var r0 Cpu
+	var r0 CPU
 	var r1 error
 
 	if ret.Get(0) != nil {
-		r0 = ret.Get(0).(Cpu)
+		r0 = ret.Get(0).(CPU)
 	}
 	r1 = ret.Error(1)
 
 	return r0, r1
 }
 
-func (m *mockCpuTopology) CPUs() *CpuList {
+func (m *mockCPUTopology) CPUs() *CPUList {
 	ret := m.Called()
 
-	var r0 *CpuList
+	var r0 *CPUList
 	if ret.Get(0) != nil {
-		r0 = ret.Get(0).(*CpuList)
+		r0 = ret.Get(0).(*CPUList)
 	}
 
 	return r0
 }
 
-func (m *mockCpuTopology) Packages() *[]Package {
+func (m *mockCPUTopology) Packages() *[]Package {
 	ret := m.Called()
 
 	var r0 *[]Package
@@ -79,7 +79,7 @@ func (m *mockCpuTopology) Packages() *[]Package {
 	return r0
 }
 
-func (m *mockCpuTopology) Package(id uint) Package {
+func (m *mockCPUTopology) Package(id uint) Package {
 	ret := m.Called(id)
 
 	var r0 Package
@@ -90,23 +90,23 @@ func (m *mockCpuTopology) Package(id uint) Package {
 	return r0
 }
 
-type mockCpuPackage struct {
+type mockCPUPackage struct {
 	mock.Mock
 }
 
-func (m *mockCpuPackage) getID() uint {
+func (m *mockCPUPackage) getID() uint {
 	return m.Called().Get(0).(uint)
 }
 
-func (m *mockCpuPackage) SetUncore(uncore Uncore) error {
+func (m *mockCPUPackage) SetUncore(uncore Uncore) error {
 	return m.Called(uncore).Error(0)
 }
 
-func (m *mockCpuPackage) applyUncore() error {
+func (m *mockCPUPackage) applyUncore() error {
 	return m.Called().Error(0)
 }
 
-func (m *mockCpuPackage) getEffectiveUncore() Uncore {
+func (m *mockCPUPackage) getEffectiveUncore() Uncore {
 	ret := m.Called()
 	if ret.Get(0) != nil {
 		return ret.Get(0).(Uncore)
@@ -114,32 +114,32 @@ func (m *mockCpuPackage) getEffectiveUncore() Uncore {
 	return nil
 }
 
-func (m *mockCpuPackage) addCpu(u uint) (Cpu, error) {
+func (m *mockCPUPackage) addCPU(u uint) (CPU, error) {
 	ret := m.Called(u)
 
-	var r0 Cpu
+	var r0 CPU
 	var r1 error
 
 	if ret.Get(0) != nil {
-		r0 = ret.Get(0).(Cpu)
+		r0 = ret.Get(0).(CPU)
 	}
 	r1 = ret.Error(1)
 
 	return r0, r1
 }
 
-func (m *mockCpuPackage) CPUs() *CpuList {
+func (m *mockCPUPackage) CPUs() *CPUList {
 	ret := m.Called()
 
-	var r0 *CpuList
+	var r0 *CPUList
 	if ret.Get(0) != nil {
-		r0 = ret.Get(0).(*CpuList)
+		r0 = ret.Get(0).(*CPUList)
 	}
 
 	return r0
 }
 
-func (m *mockCpuPackage) Dies() *[]Die {
+func (m *mockCPUPackage) Dies() *[]Die {
 	ret := m.Called()
 
 	var r0 *[]Die
@@ -150,7 +150,7 @@ func (m *mockCpuPackage) Dies() *[]Die {
 	return r0
 }
 
-func (m *mockCpuPackage) Die(id uint) Die {
+func (m *mockCPUPackage) Die(id uint) Die {
 	ret := m.Called(id)
 
 	var r0 Die
@@ -161,23 +161,23 @@ func (m *mockCpuPackage) Die(id uint) Die {
 	return r0
 }
 
-type mockCpuDie struct {
+type mockCPUDie struct {
 	mock.Mock
 }
 
-func (m *mockCpuDie) getID() uint {
+func (m *mockCPUDie) getID() uint {
 	return m.Called().Get(0).(uint)
 }
 
-func (m *mockCpuDie) SetUncore(uncore Uncore) error {
+func (m *mockCPUDie) SetUncore(uncore Uncore) error {
 	return m.Called(uncore).Error(0)
 }
 
-func (m *mockCpuDie) applyUncore() error {
+func (m *mockCPUDie) applyUncore() error {
 	return m.Called().Error(0)
 }
 
-func (m *mockCpuDie) getEffectiveUncore() Uncore {
+func (m *mockCPUDie) getEffectiveUncore() Uncore {
 	ret := m.Called()
 	if ret.Get(0) != nil {
 		return ret.Get(0).(Uncore)
@@ -185,32 +185,32 @@ func (m *mockCpuDie) getEffectiveUncore() Uncore {
 	return nil
 }
 
-func (m *mockCpuDie) addCpu(u uint) (Cpu, error) {
+func (m *mockCPUDie) addCPU(u uint) (CPU, error) {
 	ret := m.Called(u)
 
-	var r0 Cpu
+	var r0 CPU
 	var r1 error
 
 	if ret.Get(0) != nil {
-		r0 = ret.Get(0).(Cpu)
+		r0 = ret.Get(0).(CPU)
 	}
 	r1 = ret.Error(1)
 
 	return r0, r1
 }
 
-func (m *mockCpuDie) CPUs() *CpuList {
+func (m *mockCPUDie) CPUs() *CPUList {
 	ret := m.Called()
 
-	var r0 *CpuList
+	var r0 *CPUList
 	if ret.Get(0) != nil {
-		r0 = ret.Get(0).(*CpuList)
+		r0 = ret.Get(0).(*CPUList)
 	}
 
 	return r0
 }
 
-func (m *mockCpuDie) Cores() *[]Core {
+func (m *mockCPUDie) Cores() *[]Core {
 	ret := m.Called()
 
 	var r0 *[]Core
@@ -221,7 +221,7 @@ func (m *mockCpuDie) Cores() *[]Core {
 	return r0
 }
 
-func (m *mockCpuDie) Core(id uint) Core {
+func (m *mockCPUDie) Core(id uint) Core {
 	ret := m.Called(id)
 
 	var r0 Core
@@ -232,45 +232,45 @@ func (m *mockCpuDie) Core(id uint) Core {
 	return r0
 }
 
-type mockCpuCore struct {
+type mockCPUCore struct {
 	mock.Mock
 	Core
 }
 
-func (m *mockCpuCore) GetType() uint {
+func (m *mockCPUCore) GetType() uint {
 	return m.Called().Get(0).(uint)
 }
 
-func (m *mockCpuCore) setType(t uint) {
+func (m *mockCPUCore) setType(t uint) {
 
 }
 
-func (m *mockCpuCore) addCpu(cpuId uint) (Cpu, error) {
-	ret := m.Called(cpuId)
+func (m *mockCPUCore) addCPU(cpuID uint) (CPU, error) {
+	ret := m.Called(cpuID)
 
-	var r0 Cpu
+	var r0 CPU
 	var r1 error
 
 	if ret.Get(0) != nil {
-		r0 = ret.Get(0).(Cpu)
+		r0 = ret.Get(0).(CPU)
 	}
 	r1 = ret.Error(1)
 
 	return r0, r1
 }
 
-func (m *mockCpuCore) CPUs() *CpuList {
+func (m *mockCPUCore) CPUs() *CPUList {
 	ret := m.Called()
 
-	var r0 *CpuList
+	var r0 *CPUList
 	if ret.Get(0) != nil {
-		r0 = ret.Get(0).(*CpuList)
+		r0 = ret.Get(0).(*CPUList)
 
 	}
 	return r0
 }
 
-func (m *mockCpuCore) getID() uint {
+func (m *mockCPUCore) getID() uint {
 	return m.Called().Get(0).(uint)
 }
 
@@ -296,24 +296,24 @@ func setupTopologyTest(cpufiles map[string]map[string]string) func() {
 		for prop, value := range cpuDetails {
 			switch prop {
 			case "pkg":
-				err := os.WriteFile(filepath.Join(cpudir, packageIdFile), []byte(value+"\n"), 0664)
+				err := os.WriteFile(filepath.Join(cpudir, packageIDFile), []byte(value+"\n"), 0o664)
 				if err != nil {
 					panic(err)
 				}
 			case "die":
-				err := os.WriteFile(filepath.Join(cpudir, dieIdFile), []byte(value+"\n"), 0644)
+				err := os.WriteFile(filepath.Join(cpudir, dieIDFile), []byte(value+"\n"), 0o644)
 				if err != nil {
 					panic(err)
 				}
 			case "core":
-				err := os.WriteFile(filepath.Join(cpudir, coreIdFile), []byte(value+"\n"), 0644)
+				err := os.WriteFile(filepath.Join(cpudir, coreIDFile), []byte(value+"\n"), 0o644)
 				if err != nil {
 					panic(err)
 				}
 			case "max":
-				os.WriteFile(filepath.Join(cpudir, cpuMaxFreqFile), []byte(value+"\n"), 0644)
+				os.WriteFile(filepath.Join(cpudir, cpuMaxFreqFile), []byte(value+"\n"), 0o644)
 			case "min":
-				os.WriteFile(filepath.Join(cpudir, cpuMinFreqFile), []byte(value+"\n"), 0644)
+				os.WriteFile(filepath.Join(cpudir, cpuMinFreqFile), []byte(value+"\n"), 0o644)
 			}
 		}
 	}
@@ -449,7 +449,7 @@ func (s *topologyTestSuite) TestCpuImpl_discoverTopology() {
 }
 
 func (s *topologyTestSuite) TestSystemTopology_Getters() {
-	cpus := make(CpuList, 2)
+	cpus := make(CPUList, 2)
 	cpus[0] = new(cpuMock)
 	cpus[1] = new(cpuMock)
 
@@ -473,15 +473,15 @@ func (s *topologyTestSuite) TestSystemTopology_addCpu() {
 	// fail to read fs
 	topo := &cpuTopology{
 		packages: packageList{},
-		allCpus:  make(CpuList, 1),
+		allCpus:  make(CPUList, 1),
 	}
-	cpu, err := topo.addCpu(0)
+	cpu, err := topo.addCPU(0)
 	assert.Error(s.T(), err)
 	assert.Nil(s.T(), cpu)
 }
 
 func (s *topologyTestSuite) TestCpuPackage_Getters() {
-	cpus := make(CpuList, 2)
+	cpus := make(CPUList, 2)
 	cpus[0] = new(cpuMock)
 	cpus[1] = new(cpuMock)
 
@@ -505,21 +505,21 @@ func (s *topologyTestSuite) TestCpuPackage_addCpu() {
 	// fail to read fs
 	topo := &cpuTopology{
 		packages:     packageList{},
-		allCpus:      make(CpuList, 1),
+		allCpus:      make(CPUList, 1),
 		architecture: "x86_64",
 	}
 	pkg := &cpuPackage{
 		topology: topo,
 		dies:     dieList{},
-		cpus:     make(CpuList, 1),
+		cpus:     make(CPUList, 1),
 	}
-	cpu, err := pkg.addCpu(0)
+	cpu, err := pkg.addCPU(0)
 	assert.Error(s.T(), err)
 	assert.Nil(s.T(), cpu)
 }
 
 func (s *topologyTestSuite) TestCpuDie_Getters() {
-	cpus := make(CpuList, 2)
+	cpus := make(CPUList, 2)
 	cpus[0] = new(cpuMock)
 	cpus[1] = new(cpuMock)
 
@@ -543,21 +543,21 @@ func (s *topologyTestSuite) TestCpuDie_addCpu() {
 	// fail to read fs
 	topo := &cpuTopology{
 		packages:     packageList{},
-		allCpus:      make(CpuList, 1),
+		allCpus:      make(CPUList, 1),
 		architecture: "x86_64",
 	}
 	pkg := &cpuPackage{
 		topology: topo,
 		dies:     dieList{},
-		cpus:     make(CpuList, 1),
+		cpus:     make(CPUList, 1),
 	}
-	cpu, err := pkg.addCpu(0)
+	cpu, err := pkg.addCPU(0)
 	assert.Error(s.T(), err)
 	assert.Nil(s.T(), cpu)
 }
 
 func (s *topologyTestSuite) TestCpuCore_Getters() {
-	cpus := make(CpuList, 2)
+	cpus := make(CPUList, 2)
 	cpus[0] = new(cpuMock)
 	cpus[1] = new(cpuMock)
 

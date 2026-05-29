@@ -38,8 +38,8 @@ func (p *profileImpl) GetCStates() CStates {
 // NewPowerProfile creates a new power profile with both P-states and C-states configuration
 // C-states can be configured either with explicit names or latency-based filtering
 func NewPowerProfile(name string, minFreq, maxFreq *intstr.IntOrString, governor, epp string, cstates map[string]bool, maxLatencyUs *int) (Profile, error) {
-	if !featureList.isFeatureIdSupported(FrequencyScalingFeature) {
-		return nil, featureList.getFeatureIdError(FrequencyScalingFeature)
+	if !featureList.isFeatureIDSupported(FrequencyScalingFeature) {
+		return nil, featureList.getFeatureIDError(FrequencyScalingFeature)
 	}
 
 	finalMinFreq, finalMaxFreq, err := AdjustMinMaxFreq(minFreq, maxFreq)
@@ -51,8 +51,8 @@ func NewPowerProfile(name string, minFreq, maxFreq *intstr.IntOrString, governor
 		return nil, fmt.Errorf("invalid P-states configuration: %w", err)
 	}
 
-	if !featureList.isFeatureIdSupported(CStatesFeature) {
-		return nil, featureList.getFeatureIdError(CStatesFeature)
+	if !featureList.isFeatureIDSupported(CStatesFeature) {
+		return nil, featureList.getFeatureIDError(CStatesFeature)
 	}
 
 	if err := ValidateCStates(cstates, maxLatencyUs); err != nil {
@@ -93,7 +93,8 @@ func AdjustMinMaxFreq(minFreq, maxFreq *intstr.IntOrString) (intstr.IntOrString,
 
 	absoluteMinimumFrequency, absoluteMaximumFrequency := coreTypes.getAbsMinMaxFreq()
 
-	if minFreq == nil && maxFreq != nil {
+	switch {
+	case minFreq == nil && maxFreq != nil:
 		finalMaxFreq = *maxFreq
 		switch maxFreq.Type {
 		case intstr.Int:
@@ -101,7 +102,7 @@ func AdjustMinMaxFreq(minFreq, maxFreq *intstr.IntOrString) (intstr.IntOrString,
 		case intstr.String:
 			finalMinFreq = intstr.FromString("0%")
 		}
-	} else if maxFreq == nil && minFreq != nil {
+	case maxFreq == nil && minFreq != nil:
 		finalMinFreq = *minFreq
 		switch minFreq.Type {
 		case intstr.Int:
@@ -109,10 +110,10 @@ func AdjustMinMaxFreq(minFreq, maxFreq *intstr.IntOrString) (intstr.IntOrString,
 		case intstr.String:
 			finalMaxFreq = intstr.FromString("100%")
 		}
-	} else if maxFreq == nil && minFreq == nil {
+	case maxFreq == nil && minFreq == nil:
 		finalMinFreq = intstr.FromString("0%")
 		finalMaxFreq = intstr.FromString("100%")
-	} else {
+	default:
 		finalMinFreq = *minFreq
 		finalMaxFreq = *maxFreq
 	}

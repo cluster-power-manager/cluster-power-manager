@@ -73,7 +73,7 @@ func setupScalingTestFiles(cores int, cpufiles map[string]string) (power.Host, f
 	originalGetFromLscpu := power.GetFromLscpu
 	power.GetFromLscpu = power.TestGetFromLscpu
 	host, err := power.CreateInstanceWithConf("test-node", power.LibConfig{
-		CpuPath:    "testing/cpus",
+		CPUPath:    "testing/cpus",
 		ModulePath: "testing/proc.modules",
 		Cores:      uint(cores),
 	})

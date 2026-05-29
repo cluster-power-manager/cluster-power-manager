@@ -110,7 +110,7 @@ func createPodReconcilerObject(objs []runtime.Object, podResourcesClient *podres
 	mockPowerLibrary := new(hostMock)
 
 	// Set up mock to return valid pools for profiles that should work
-	// Each pool returns an empty CpuList (new CPUs will be added)
+	// Each pool returns an empty CPUList (new CPUs will be added)
 	mockPowerLibrary.On("GetExclusivePool", "performance").Return(createMockPoolWithCPUs([]uint{}))
 	mockPowerLibrary.On("GetExclusivePool", "balance-performance").Return(createMockPoolWithCPUs([]uint{}))
 	mockPowerLibrary.On("GetExclusivePool", "universal").Return(createMockPoolWithCPUs([]uint{}))
@@ -934,7 +934,7 @@ func TestPowerPod_Reconcile_Delete(t *testing.T) {
 		podFromState := r.State.GetPodFromState(tc.podName, PowerNamespace)
 		assert.Empty(t, podFromState.UID, "%s: expected pod to be removed from internal state", tc.testCase)
 
-		// Verify the shared pool MoveCpuIDs was called (CPUs moved back)
+		// Verify the shared pool MoveCPUIDs was called (CPUs moved back)
 		// The mock records all calls, so we verify it was called
 		mockHost := r.PowerLibrary.(*hostMock)
 		mockHost.AssertCalled(t, "GetSharedPool")
@@ -2255,8 +2255,8 @@ func TestPowerPod_generateCPUScalingOpts(t *testing.T) {
 	minFreq := uint(1000000)
 	maxFreq := uint(3700000)
 
-	// Build a CpuList with mock CPUs 0, 1, 2.
-	cpuList := make(power.CpuList, 3)
+	// Build a CPUList with mock CPUs 0, 1, 2.
+	cpuList := make(power.CPUList, 3)
 	for i, id := range []uint{0, 1, 2} {
 		cpu := new(coreMock)
 		cpu.On("GetID").Return(id)
@@ -2456,10 +2456,10 @@ func TestPowerPod_Reconcile_WithCPUScalingPolicy(t *testing.T) {
 			host, teardown, err := fullDummySystem()
 			assert.NoError(t, err)
 			t.Cleanup(teardown)
-			assert.NoError(t, host.GetSharedPool().SetCpuIDs(tc.cpuIDs))
+			assert.NoError(t, host.GetSharedPool().SetCPUIDs(tc.cpuIDs))
 			pool, err := host.AddExclusivePool(tc.profileName)
 			assert.NoError(t, err)
-			assert.NoError(t, pool.SetCpuIDs(tc.cpuIDs))
+			assert.NoError(t, pool.SetCPUIDs(tc.cpuIDs))
 
 			// Create reconciler and override with real power library and DPDK mocks.
 			r, err := createPodReconcilerObject(
@@ -2592,10 +2592,10 @@ func TestPowerPod_Reconcile_MultipleDPDKContainersRejected(t *testing.T) {
 	host, teardown, err := fullDummySystem()
 	assert.NoError(t, err)
 	t.Cleanup(teardown)
-	assert.NoError(t, host.GetSharedPool().SetCpuIDs([]uint{0, 1, 2, 3}))
+	assert.NoError(t, host.GetSharedPool().SetCPUIDs([]uint{0, 1, 2, 3}))
 	pool, err := host.AddExclusivePool(profileName)
 	assert.NoError(t, err)
-	assert.NoError(t, pool.SetCpuIDs([]uint{0, 1, 2, 3}))
+	assert.NoError(t, pool.SetCPUIDs([]uint{0, 1, 2, 3}))
 
 	r, err := createPodReconcilerObject(
 		[]runtime.Object{

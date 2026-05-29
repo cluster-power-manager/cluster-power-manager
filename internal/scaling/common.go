@@ -9,7 +9,7 @@ import (
 const FrequencyNotYetSet int = -1
 
 type CPUScalingOpts struct {
-	CPU                        power.Cpu
+	CPU                        power.CPU
 	SamplePeriod               time.Duration
 	CooldownPeriod             time.Duration
 	TargetUsage                int

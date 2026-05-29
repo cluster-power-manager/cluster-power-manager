@@ -70,7 +70,7 @@ func (p *pstatesImpl) GetEpp() string {
 }
 
 type (
-	CpuFrequencySet struct {
+	CPUFrequencySet struct {
 		min uint
 		max uint
 	}
@@ -85,11 +85,11 @@ type (
 	CoreTypeList []FreqSet
 )
 
-func (s *CpuFrequencySet) GetMin() uint {
+func (s *CPUFrequencySet) GetMin() uint {
 	return s.min
 }
 
-func (s *CpuFrequencySet) GetMax() uint {
+func (s *CPUFrequencySet) GetMax() uint {
 	return s.max
 }
 
@@ -103,7 +103,7 @@ func (l *CoreTypeList) appendIfUnique(min uint, max uint) uint {
 		}
 	}
 	// core type doesn't exist so append it and return index
-	coreTypes = append(coreTypes, &CpuFrequencySet{min: min, max: max})
+	coreTypes = append(coreTypes, &CPUFrequencySet{min: min, max: max})
 	return uint(len(coreTypes) - 1)
 }
 
@@ -151,7 +151,7 @@ func initScalingDriver() featureStatus {
 	if err != nil {
 		pStates.err = fmt.Errorf("failed to read available governors: %w", err)
 	}
-	driver, err := readCpuStringProperty(0, pStatesDrvFile)
+	driver, err := readCPUStringProperty(0, pStatesDrvFile)
 	if err != nil {
 		pStates.err = fmt.Errorf("%s - failed to read driver name: %w", pStates.name, err)
 	}
@@ -164,7 +164,7 @@ func initScalingDriver() featureStatus {
 	}
 	if pStates.err == nil {
 		if err := generateDefaultPStates(); err != nil {
-			pStates.err = fmt.Errorf("failed to read default frequenices: %w", err)
+			pStates.err = fmt.Errorf("failed to read default frequencies: %w", err)
 		}
 	}
 	return pStates
@@ -175,7 +175,7 @@ func initEpp() featureStatus {
 		name:     "Energy-Performance-Preference",
 		initFunc: initEpp,
 	}
-	_, err := readCpuStringProperty(0, eppFile)
+	_, err := readCPUStringProperty(0, eppFile)
 	if os.IsNotExist(errors.Unwrap(err)) {
 		epp.err = fmt.Errorf("EPP file %s does not exist", eppFile)
 	}
@@ -183,7 +183,7 @@ func initEpp() featureStatus {
 }
 
 func initAvailableGovernors() ([]string, error) {
-	govs, err := readCpuStringProperty(0, availGovFile)
+	govs, err := readCPUStringProperty(0, availGovFile)
 	if err != nil {
 		return []string{}, err
 	}
@@ -198,16 +198,16 @@ func generateDefaultPStates() error {
 	numCpus := getNumberOfCpus()
 	allCPUDefaultPStatesInfo = make([]pstatesImpl, numCpus)
 	for cpuID := uint(0); cpuID < numCpus; cpuID++ {
-		cpuInfoMaxFreq, err := readCpuUintProperty(cpuID, cpuMaxFreqFile)
+		cpuInfoMaxFreq, err := readCPUUintProperty(cpuID, cpuMaxFreqFile)
 		if err != nil {
 			return err
 		}
-		cpuInfoMinFreq, err := readCpuUintProperty(cpuID, cpuMinFreqFile)
+		cpuInfoMinFreq, err := readCPUUintProperty(cpuID, cpuMinFreqFile)
 		if err != nil {
 			return err
 		}
 
-		_, err = readCpuStringProperty(cpuID, eppFile)
+		_, err = readCPUStringProperty(cpuID, eppFile)
 		epp := defaultEpp
 		if os.IsNotExist(errors.Unwrap(err)) {
 			epp = ""
@@ -324,26 +324,26 @@ func getFreqFromIntOrString(requestedFreq intstr.IntOrString, minFreq, maxFreq u
 }
 
 func (cpu *cpuImpl) writeGovernorValue(governor string) error {
-	return os.WriteFile(filepath.Join(basePath, fmt.Sprint("cpu", cpu.id), scalingGovFile), []byte(governor), 0644)
+	return os.WriteFile(filepath.Join(basePath, fmt.Sprint("cpu", cpu.id), scalingGovFile), []byte(governor), 0o644) //nolint:gosec
 }
 
 func (cpu *cpuImpl) writeEppValue(eppValue string) error {
-	return os.WriteFile(filepath.Join(basePath, fmt.Sprint("cpu", cpu.id), eppFile), []byte(eppValue), 0644)
+	return os.WriteFile(filepath.Join(basePath, fmt.Sprint("cpu", cpu.id), eppFile), []byte(eppValue), 0o644) //nolint:gosec
 }
 
 func (cpu *cpuImpl) writeScalingMaxFreq(freq uint) error {
 	scalingFile := filepath.Join(basePath, fmt.Sprint("cpu", cpu.id), scalingMaxFile)
-	f, err := os.OpenFile(
+	f, err := os.OpenFile( //nolint:gosec
 		scalingFile,
 		os.O_WRONLY|os.O_TRUNC|os.O_CREATE,
-		0644,
+		0o644,
 	)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	_, err = f.WriteString(fmt.Sprint(freq))
+	_, err = fmt.Fprint(f, freq)
 	if err != nil {
 		return err
 	}
@@ -352,17 +352,17 @@ func (cpu *cpuImpl) writeScalingMaxFreq(freq uint) error {
 
 func (cpu *cpuImpl) writeScalingMinFreq(freq uint) error {
 	scalingFile := filepath.Join(basePath, fmt.Sprint("cpu", cpu.id), scalingMinFile)
-	f, err := os.OpenFile(
+	f, err := os.OpenFile( //nolint:gosec
 		scalingFile,
 		os.O_WRONLY|os.O_TRUNC|os.O_CREATE,
-		0644,
+		0o644,
 	)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	_, err = f.WriteString(fmt.Sprint(freq))
+	_, err = fmt.Fprint(f, freq)
 	if err != nil {
 		return err
 	}
@@ -373,7 +373,7 @@ func (cpu *cpuImpl) writeScalingMinFreq(freq uint) error {
 func (cpu *cpuImpl) SetCPUFrequency(frequency uint) error {
 	scalingSetspeedPath := filepath.Join(basePath, fmt.Sprint("cpu", cpu.id), scalingSetSpeedFile)
 	// Write the desired frequency
-	err := os.WriteFile(scalingSetspeedPath, []byte(fmt.Sprintf("%d", frequency)), 0644)
+	err := os.WriteFile(scalingSetspeedPath, []byte(fmt.Sprintf("%d", frequency)), 0o644) //nolint:gosec
 	if err != nil {
 		return fmt.Errorf("failed to set frequency for CPU %d: %w", cpu.id, err)
 	}
@@ -383,7 +383,7 @@ func (cpu *cpuImpl) SetCPUFrequency(frequency uint) error {
 
 // GetCurrentCPUFrequency returns the CPU frequency in kHz for the specified CPU.
 func (cpu *cpuImpl) GetCurrentCPUFrequency() (uint, error) {
-	freq, err := readCpuUintProperty(cpu.id, scalingCurFreqFile)
+	freq, err := readCPUUintProperty(cpu.id, scalingCurFreqFile)
 	if err != nil {
 		return 0, fmt.Errorf("failed to read current frequency for CPU %d: %w", cpu.id, err)
 	}

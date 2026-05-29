@@ -422,7 +422,7 @@ func TestConfigureSharedPool(t *testing.T) {
 				h.On("GetReservedPool").Return(rp)
 				ep.On("GetPowerProfile").Return(pm)
 				sp.On("SetPowerProfile", pm).Return(nil)
-				rp.On("SetCpuIDs", []uint{}).Return(nil)
+				rp.On("SetCPUIDs", []uint{}).Return(nil)
 				return h
 			},
 		},
@@ -503,7 +503,7 @@ func TestConfigureReservedPools(t *testing.T) {
 				rp := new(poolMock)
 				h.On("GetReservedPool").Return(rp)
 				h.On("GetAllExclusivePools").Return(&power.PoolList{})
-				rp.On("SetCpuIDs", []uint{}).Return(nil)
+				rp.On("SetCPUIDs", []uint{}).Return(nil)
 				return h
 			},
 		},
@@ -522,11 +522,11 @@ func TestConfigureReservedPools(t *testing.T) {
 				h.On("GetAllExclusivePools").Return(&power.PoolList{})
 				h.On("AddExclusivePool", mock.Anything).Return(pp, nil)
 				h.On("GetExclusivePool", "perf").Return(ep)
-				rp.On("SetCpuIDs", []uint{}).Return(nil)
-				sp.On("MoveCpuIDs", []uint{0, 1}).Return(nil)
+				rp.On("SetCPUIDs", []uint{}).Return(nil)
+				sp.On("MoveCPUIDs", []uint{0, 1}).Return(nil)
 				ep.On("GetPowerProfile").Return(pm)
 				pp.On("SetPowerProfile", pm).Return(nil)
-				pp.On("SetCpuIDs", []uint{0, 1}).Return(nil)
+				pp.On("SetCPUIDs", []uint{0, 1}).Return(nil)
 				return h
 			},
 			expectedCPUCount: 1,
@@ -541,9 +541,9 @@ func TestConfigureReservedPools(t *testing.T) {
 				h.On("GetReservedPool").Return(rp)
 				h.On("GetSharedPool").Return(sp)
 				h.On("GetAllExclusivePools").Return(&power.PoolList{})
-				rp.On("SetCpuIDs", []uint{}).Return(nil)
-				rp.On("MoveCpuIDs", []uint{0, 1}).Return(nil)
-				sp.On("MoveCpuIDs", []uint{0, 1}).Return(nil)
+				rp.On("SetCPUIDs", []uint{}).Return(nil)
+				rp.On("MoveCPUIDs", []uint{0, 1}).Return(nil)
+				sp.On("MoveCPUIDs", []uint{0, 1}).Return(nil)
 				return h
 			},
 			expectedCPUCount: 1,
@@ -559,9 +559,9 @@ func TestConfigureReservedPools(t *testing.T) {
 				h.On("GetSharedPool").Return(sp)
 				h.On("GetAllExclusivePools").Return(&power.PoolList{})
 				h.On("AddExclusivePool", mock.Anything).Return(nil, assert.AnError)
-				rp.On("SetCpuIDs", []uint{}).Return(nil)
-				rp.On("MoveCpuIDs", []uint{0, 1}).Return(nil)
-				sp.On("MoveCpuIDs", []uint{0, 1}).Return(nil)
+				rp.On("SetCPUIDs", []uint{}).Return(nil)
+				rp.On("MoveCPUIDs", []uint{0, 1}).Return(nil)
+				sp.On("MoveCPUIDs", []uint{0, 1}).Return(nil)
 				return h
 			},
 			expectedCPUCount: 1,
@@ -603,7 +603,7 @@ func TestCreateReservedPool(t *testing.T) {
 				h.On("GetExclusivePool", "perf").Return(ep)
 				ep.On("GetPowerProfile").Return(pm)
 				pp.On("SetPowerProfile", pm).Return(nil)
-				pp.On("SetCpuIDs", []uint{0, 1}).Return(nil)
+				pp.On("SetCPUIDs", []uint{0, 1}).Return(nil)
 				return h
 			},
 		},
@@ -662,7 +662,7 @@ func TestCreateReservedPool(t *testing.T) {
 				h.On("GetExclusivePool", "perf").Return(ep)
 				ep.On("GetPowerProfile").Return(pm)
 				pp.On("SetPowerProfile", pm).Return(nil)
-				pp.On("SetCpuIDs", mock.Anything).Return(assert.AnError)
+				pp.On("SetCPUIDs", mock.Anything).Return(assert.AnError)
 				pp.On("Remove").Return(nil)
 				return h
 			},
@@ -792,7 +792,7 @@ func TestApplyPowerNodeConfig(t *testing.T) {
 				h.On("GetAllExclusivePools").Return(&power.PoolList{})
 				ep.On("GetPowerProfile").Return(pm)
 				sp.On("SetPowerProfile", pm).Return(nil)
-				rp.On("SetCpuIDs", []uint{}).Return(nil)
+				rp.On("SetCPUIDs", []uint{}).Return(nil)
 				return h
 			},
 		},

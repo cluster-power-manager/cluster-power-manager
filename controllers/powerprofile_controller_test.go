@@ -233,8 +233,8 @@ func TestPowerProfile_Reconcile_SharedPoolCreation(t *testing.T) {
 	nodemk.On("GetFreqRanges").Return(power.CoreTypeList{freqSetmk})
 	freqSetmk.On("GetMax").Return(uint(9000000))
 	freqSetmk.On("GetMin").Return(uint(100000))
-	// Mock GetAllCpus to return an empty CpuList
-	nodemk.On("GetAllCpus").Return(new(power.CpuList))
+	// Mock GetAllCpus to return an empty CPUList
+	nodemk.On("GetAllCpus").Return(new(power.CPUList))
 	t.Setenv("NODE_NAME", "TestNode")
 	r, err := createProfileReconcilerObject(clientObjs)
 	assert.Nil(t, err)
@@ -867,8 +867,8 @@ func TestPowerProfile_Reconcile_IncorrectEppValue(t *testing.T) {
 			}
 
 			nodemk := new(hostMock)
-			// Mock GetAllCpus to return an empty CpuList
-			nodemk.On("GetAllCpus").Return(new(power.CpuList))
+			// Mock GetAllCpus to return an empty CPUList
+			nodemk.On("GetAllCpus").Return(new(power.CPUList))
 			r.PowerLibrary = nodemk
 
 			req := reconcile.Request{
@@ -1195,7 +1195,7 @@ func TestPowerProfile_Reconcile_LibraryErrs(t *testing.T) {
 				dummyProf := new(profMock)
 				nodemk.On("GetExclusivePool", mock.Anything).Return(nil)
 				nodemk.On("GetSharedPool").Return(dummyShared)
-				nodemk.On("GetAllCpus").Return(new(power.CpuList))
+				nodemk.On("GetAllCpus").Return(new(power.CPUList))
 				dummyShared.On("GetPowerProfile").Return(dummyProf)
 				dummyProf.On("Name").Return("shared")
 				return nodemk
@@ -1212,7 +1212,7 @@ func TestPowerProfile_Reconcile_LibraryErrs(t *testing.T) {
 				nodemk := new(hostMock)
 				nodemk.On("GetExclusivePool", mock.Anything).Return(nil)
 				nodemk.On("AddExclusivePool", mock.Anything).Return(nil, fmt.Errorf("Pool creation err"))
-				nodemk.On("GetAllCpus").Return(new(power.CpuList))
+				nodemk.On("GetAllCpus").Return(new(power.CPUList))
 				freqSetmk := new(frequencySetMock)
 				nodemk.On("GetFreqRanges").Return(power.CoreTypeList{freqSetmk})
 				freqSetmk.On("GetMax").Return(uint(9000000))
@@ -1255,7 +1255,7 @@ func TestPowerProfile_Reconcile_LibraryErrs(t *testing.T) {
 				nodemk := new(hostMock)
 				poolmk := new(poolMock)
 				nodemk.On("GetExclusivePool", mock.Anything).Return(nil)
-				nodemk.On("GetAllCpus").Return(new(power.CpuList))
+				nodemk.On("GetAllCpus").Return(new(power.CPUList))
 				freqSetmk := new(frequencySetMock)
 				nodemk.On("GetFreqRanges").Return(power.CoreTypeList{freqSetmk})
 				freqSetmk.On("GetMax").Return(uint(9000000))
@@ -1302,7 +1302,7 @@ func TestPowerProfile_Reconcile_LibraryErrs(t *testing.T) {
 				profmk := new(profMock)
 				nodemk.On("GetSharedPool").Return(poolmk)
 				poolmk.On("GetPowerProfile").Return(profmk)
-				nodemk.On("GetAllCpus").Return(new(power.CpuList))
+				nodemk.On("GetAllCpus").Return(new(power.CPUList))
 				profmk.On("Name").Return("shared")
 				poolmk.On("SetPowerProfile", mock.Anything).Return(fmt.Errorf("Set profile err"))
 				return nodemk
@@ -1321,7 +1321,7 @@ func TestPowerProfile_Reconcile_LibraryErrs(t *testing.T) {
 				profmk := new(profMock)
 				nodemk.On("GetSharedPool").Return(poolmk)
 				poolmk.On("GetPowerProfile").Return(profmk)
-				nodemk.On("GetAllCpus").Return(new(power.CpuList))
+				nodemk.On("GetAllCpus").Return(new(power.CPUList))
 				profmk.On("Name").Return("shared")
 				poolmk.On("SetPowerProfile", mock.Anything).Return(nil)
 				nodemk.On("GetExclusivePool", mock.Anything).Return(nil)
@@ -1341,7 +1341,7 @@ func TestPowerProfile_Reconcile_LibraryErrs(t *testing.T) {
 				dummyPoolmk := new(poolMock)
 				profmk := new(profMock)
 				nodemk.On("GetSharedPool").Return(poolmk)
-				nodemk.On("GetAllCpus").Return(new(power.CpuList))
+				nodemk.On("GetAllCpus").Return(new(power.CPUList))
 				poolmk.On("GetPowerProfile").Return(profmk)
 				profmk.On("Name").Return("shared")
 				poolmk.On("SetPowerProfile", mock.Anything).Return(nil)
@@ -1474,7 +1474,7 @@ func TestPowerProfile_Reconcile_FeatureNotSupportedErr(t *testing.T) {
 		nodemk.On("GetFreqRanges").Return(power.CoreTypeList{freqSetmk})
 		freqSetmk.On("GetMax").Return(uint(9000000))
 		freqSetmk.On("GetMin").Return(uint(100000))
-		nodemk.On("GetAllCpus").Return(new(power.CpuList))
+		nodemk.On("GetAllCpus").Return(new(power.CPUList))
 		poolmk := new(poolMock)
 		nodemk.On("GetExclusivePool", mock.Anything).Return(poolmk)
 		r.PowerLibrary = nodemk

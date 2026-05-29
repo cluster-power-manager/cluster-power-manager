@@ -34,32 +34,32 @@ func setupUncoreTests(files map[string]map[string]string, modulesFileContent str
 	}
 
 	if modulesFileContent != "" {
-		if err := os.WriteFile(kernelModulesFilePath, []byte(modulesFileContent), 0644); err != nil {
+		if err := os.WriteFile(kernelModulesFilePath, []byte(modulesFileContent), 0o644); err != nil {
 			panic(err)
 		}
 	}
 
 	for pkgDie, freqFiles := range files {
 		pkgUncoreDir := filepath.Join(basePath, uncoreDirName, pkgDie)
-		if err := os.MkdirAll(filepath.Join(pkgUncoreDir), os.ModePerm); err != nil {
+		if err := os.MkdirAll(pkgUncoreDir, os.ModePerm); err != nil {
 			panic(err)
 		}
 		for file, value := range freqFiles {
 			switch file {
 			case "initMax":
-				if err := os.WriteFile(path.Join(pkgUncoreDir, uncoreInitMaxFreqFile), []byte(value), 0644); err != nil {
+				if err := os.WriteFile(path.Join(pkgUncoreDir, uncoreInitMaxFreqFile), []byte(value), 0o644); err != nil {
 					panic(err)
 				}
 			case "initMin":
-				if err := os.WriteFile(path.Join(pkgUncoreDir, uncoreInitMinFreqFile), []byte(value), 0644); err != nil {
+				if err := os.WriteFile(path.Join(pkgUncoreDir, uncoreInitMinFreqFile), []byte(value), 0o644); err != nil {
 					panic(err)
 				}
 			case "Max":
-				if err := os.WriteFile(path.Join(pkgUncoreDir, uncoreMaxFreqFile), []byte(value), 0644); err != nil {
+				if err := os.WriteFile(path.Join(pkgUncoreDir, uncoreMaxFreqFile), []byte(value), 0o644); err != nil {
 					panic(err)
 				}
 			case "Min":
-				if err := os.WriteFile(path.Join(pkgUncoreDir, uncoreMinFreqFile), []byte(value), 0644); err != nil {
+				if err := os.WriteFile(path.Join(pkgUncoreDir, uncoreMinFreqFile), []byte(value), 0o644); err != nil {
 					panic(err)
 				}
 			}
@@ -69,7 +69,7 @@ func setupUncoreTests(files map[string]map[string]string, modulesFileContent str
 		if err := os.RemoveAll(strings.Split(basePath, "/")[0]); err != nil {
 			panic(err)
 		}
-		featureList[UncoreFeature].err = uninitialisedErr
+		featureList[UncoreFeature].err = errUninitialized
 		kernelModulesFilePath = origModulesFile
 		basePath = origBasePath
 
@@ -157,9 +157,9 @@ func TestNewUncore(t *testing.T) {
 	assert.Nil(t, ucre)
 	assert.ErrorContains(t, err, "Min frequency is lower than")
 
-	//uncore not supported
+	// uncore not supported
 	featureList[UncoreFeature].err = fmt.Errorf("uncore borked")
-	ucre, err = NewUncore(1_400_000, 2_200_000)
+	_, err = NewUncore(1_400_000, 2_200_000)
 	assert.ErrorIs(t, err, featureList[UncoreFeature].err)
 }
 
@@ -192,7 +192,7 @@ func TestUncoreFreq_write(t *testing.T) {
 
 func TestCpuTopology_SetUncoreFrequency(t *testing.T) {
 	uncore := &uncoreFreq{}
-	pkg1 := new(mockCpuPackage)
+	pkg1 := new(mockCPUPackage)
 	pkg1.On("applyUncore").Return(nil)
 	topo := cpuTopology{
 		packages: packageList{0: pkg1},
@@ -204,9 +204,9 @@ func TestCpuTopology_SetUncoreFrequency(t *testing.T) {
 }
 
 func TestCpuTopology_applyUncore(t *testing.T) {
-	pkg1 := new(mockCpuPackage)
+	pkg1 := new(mockCPUPackage)
 	pkg1.On("applyUncore").Return(nil)
-	pkg2 := new(mockCpuPackage)
+	pkg2 := new(mockCPUPackage)
 	pkg2.On("applyUncore").Return(nil)
 
 	topo := &cpuTopology{packages: packageList{0: pkg1, 1: pkg2}}
@@ -215,7 +215,7 @@ func TestCpuTopology_applyUncore(t *testing.T) {
 	pkg2.AssertExpectations(t)
 
 	toRetErr := fmt.Errorf("scuffed")
-	pkg3 := new(mockCpuPackage)
+	pkg3 := new(mockCPUPackage)
 	pkg3.On("applyUncore").Return(toRetErr)
 	topo = &cpuTopology{packages: packageList{42: pkg3}}
 	assert.ErrorIs(t, topo.applyUncore(), toRetErr)
@@ -233,7 +233,7 @@ func TestCpuTopology_GetEffectiveUncore(t *testing.T) {
 
 func TestCpuPackage_SetUncoreFrequency(t *testing.T) {
 	uncore := &uncoreFreq{}
-	die := new(mockCpuDie)
+	die := new(mockCPUDie)
 	die.On("applyUncore").Return(nil)
 	pkg := cpuPackage{
 		dies: dieList{0: die},
@@ -245,9 +245,9 @@ func TestCpuPackage_SetUncoreFrequency(t *testing.T) {
 }
 
 func TestCpuPackage_applyUncore(t *testing.T) {
-	die1 := new(mockCpuDie)
+	die1 := new(mockCPUDie)
 	die1.On("applyUncore").Return(nil)
-	die2 := new(mockCpuDie)
+	die2 := new(mockCPUDie)
 	die2.On("applyUncore").Return(nil)
 
 	pkg := &cpuPackage{dies: dieList{0: die1, 1: die2}}
@@ -256,14 +256,14 @@ func TestCpuPackage_applyUncore(t *testing.T) {
 	die2.AssertExpectations(t)
 
 	toRetErr := fmt.Errorf("scuffed")
-	die3 := new(mockCpuDie)
+	die3 := new(mockCPUDie)
 	die3.On("applyUncore").Return(toRetErr)
 	pkg = &cpuPackage{dies: dieList{42: die3}}
 	assert.ErrorIs(t, pkg.applyUncore(), toRetErr)
 }
 
 func TestCpuPackage_getEffectiveUncore(t *testing.T) {
-	topo := new(mockCpuTopology)
+	topo := new(mockCPUTopology)
 	uncore := new(mockUncore)
 	pkg := &cpuPackage{
 		topology: topo,
@@ -272,7 +272,7 @@ func TestCpuPackage_getEffectiveUncore(t *testing.T) {
 	topo.AssertNotCalled(t, "getEffectiveUncore")
 	assert.Equal(t, uncore, pkg.getEffectiveUncore())
 
-	topo = new(mockCpuTopology)
+	topo = new(mockCPUTopology)
 	uncore = new(mockUncore)
 	topo.On("getEffectiveUncore").Return(uncore)
 	pkg = &cpuPackage{topology: topo}
@@ -284,7 +284,7 @@ func TestCpuDie_SetUncoreFrequency(t *testing.T) {
 	uncore := new(mockUncore)
 	uncore.On("write", uint(1), uint(0)).Return(nil)
 
-	pkg := new(mockCpuPackage)
+	pkg := new(mockCPUPackage)
 	pkg.On("getID").Return(uint(1))
 
 	die := &cpuDie{
@@ -300,7 +300,7 @@ func TestCpuDie_SetUncoreFrequency(t *testing.T) {
 }
 
 func TestCpuDie_getEffectiveUncore(t *testing.T) {
-	pkg := new(mockCpuPackage)
+	pkg := new(mockCPUPackage)
 	uncore := new(mockUncore)
 	die := &cpuDie{
 		parentSocket: pkg,
@@ -309,7 +309,7 @@ func TestCpuDie_getEffectiveUncore(t *testing.T) {
 	pkg.AssertNotCalled(t, "getEffectiveUncore")
 	assert.Equal(t, uncore, die.getEffectiveUncore())
 
-	pkg = new(mockCpuPackage)
+	pkg = new(mockCPUPackage)
 	uncore = new(mockUncore)
 	pkg.On("getEffectiveUncore").Return(uncore)
 	die = &cpuDie{parentSocket: pkg}
@@ -321,7 +321,7 @@ func TestCpuDie_applyUncore(t *testing.T) {
 	uncore := new(mockUncore)
 	uncore.On("write", uint(2), uint(2)).Return(nil)
 
-	pkg := new(mockCpuPackage)
+	pkg := new(mockCPUPackage)
 	pkg.On("getID").Return(uint(2))
 
 	die := &cpuDie{
@@ -335,12 +335,12 @@ func TestCpuDie_applyUncore(t *testing.T) {
 	pkg.AssertExpectations(t)
 	uncore.AssertExpectations(t)
 
-	//error writing
+	// error writing
 	uncore = new(mockUncore)
 	expectedErr := fmt.Errorf("")
 	uncore.On("write", uint(2), uint(2)).Return(expectedErr)
 
-	pkg = new(mockCpuPackage)
+	pkg = new(mockCPUPackage)
 	pkg.On("getID").Return(uint(2))
 
 	die = &cpuDie{

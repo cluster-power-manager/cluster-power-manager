@@ -7,13 +7,9 @@ import (
 	"sync"
 )
 
-const (
-	numOfSupportedCoreTypes uint = 2
-)
-
-// Cpu represents a compute unit/thread as seen by the OS
+// CPU represents a compute unit/thread as seen by the OS
 // it is either a physical core ot virtual thread if hyperthreading/SMT is enabled
-type Cpu interface {
+type CPU interface {
 	GetID() uint
 	GetAbsMinMax() (uint, uint)
 	SetPool(pool Pool) error
@@ -21,7 +17,7 @@ type Cpu interface {
 	getPool() Pool
 	doSetPool(pool Pool) error
 	consolidate() error
-	consolidate_unsafe() error
+	consolidateUnsafe() error
 	GetCore() Core
 
 	SetCPUFrequency(frequency uint) error
@@ -38,9 +34,9 @@ type cpuImpl struct {
 	core  Core
 }
 
-func newCpu(coreID uint, core Core) (Cpu, error) {
-	if featureList.isFeatureIdSupported(FrequencyScalingFeature) {
-		min, max, err := readCpuFreqLimits(coreID)
+func newCPU(coreID uint, core Core) (CPU, error) {
+	if featureList.isFeatureIDSupported(FrequencyScalingFeature) {
+		min, max, err := readCPUFreqLimits(coreID)
 		if err != nil {
 			return &cpuImpl{}, err
 		}
@@ -59,9 +55,9 @@ func newCpu(coreID uint, core Core) (Cpu, error) {
 func (cpu *cpuImpl) consolidate() error {
 	cpu.mutex.Lock()
 	defer cpu.mutex.Unlock()
-	return cpu.consolidate_unsafe()
+	return cpu.consolidateUnsafe()
 }
-func (cpu *cpuImpl) consolidate_unsafe() error {
+func (cpu *cpuImpl) consolidateUnsafe() error {
 	// Apply P-states configuration
 	if err := cpu.updateFrequencies(); err != nil {
 		return err
@@ -146,7 +142,7 @@ func (cpu *cpuImpl) doSetPool(pool Pool) error {
 	}
 
 	log.V(4).Info("starting consolidation of cpu", "coreID", cpu.id)
-	if err := cpu.consolidate_unsafe(); err != nil {
+	if err := cpu.consolidateUnsafe(); err != nil {
 		cpu.pool = origPool
 		origPoolCpus.add(cpu)
 		return err
@@ -167,7 +163,7 @@ func (cpu *cpuImpl) GetID() uint {
 
 func (cpu *cpuImpl) GetAbsMinMax() (uint, uint) {
 	// return 0,0 to prevent indexing error on coretype
-	if !featureList.isFeatureIdSupported(FrequencyScalingFeature) {
+	if !featureList.isFeatureIDSupported(FrequencyScalingFeature) {
 		return 0, 0
 	}
 	return uint(allCPUDefaultPStatesInfo[cpu.id].minFreq.IntVal), uint(allCPUDefaultPStatesInfo[cpu.id].maxFreq.IntVal)
@@ -182,13 +178,13 @@ func (cpu *cpuImpl) _setPoolProperty(pool Pool) {
 }
 
 // read property of specific CPU as an int, takes CPUid and path to specific file within cpu subdirectory in sysfs
-func readCpuUintProperty(cpuID uint, file string) (uint, error) {
+func readCPUUintProperty(cpuID uint, file string) (uint, error) {
 	path := filepath.Join(basePath, fmt.Sprint("cpu", cpuID), file)
 	return readUintFromFile(path)
 }
 
 // reads content of a file and returns it as a string
-func readCpuStringProperty(cpuID uint, file string) (string, error) {
+func readCPUStringProperty(cpuID uint, file string) (string, error) {
 	path := filepath.Join(basePath, fmt.Sprint("cpu", cpuID), file)
 	value, err := readStringFromFile(path)
 	if err != nil {
@@ -199,21 +195,21 @@ func readCpuStringProperty(cpuID uint, file string) (string, error) {
 }
 
 // reads the min and max frequency of a CPU
-func readCpuFreqLimits(id uint) (uint, uint, error) {
-	maxFreq, err := readCpuUintProperty(id, cpuMaxFreqFile)
+func readCPUFreqLimits(id uint) (uint, uint, error) {
+	maxFreq, err := readCPUUintProperty(id, cpuMaxFreqFile)
 	if err != nil {
 		return 0, 0, err
 	}
-	minFreq, err := readCpuUintProperty(id, cpuMinFreqFile)
+	minFreq, err := readCPUUintProperty(id, cpuMinFreqFile)
 	if err != nil {
 		return 0, 0, err
 	}
 	return minFreq, maxFreq, nil
 }
 
-type CpuList []Cpu
+type CPUList []CPU
 
-func (cpus *CpuList) IndexOf(cpu Cpu) int {
+func (cpus *CPUList) IndexOf(cpu CPU) int {
 	for i, c := range *cpus {
 		if c == cpu {
 			return i
@@ -222,17 +218,17 @@ func (cpus *CpuList) IndexOf(cpu Cpu) int {
 	return -1
 }
 
-func (cpus *CpuList) Contains(cpu Cpu) bool {
+func (cpus *CPUList) Contains(cpu CPU) bool {
 	if cpus.IndexOf(cpu) < 0 {
 		return false
 	} else {
 		return true
 	}
 }
-func (cpus *CpuList) add(cpu Cpu) {
+func (cpus *CPUList) add(cpu CPU) {
 	*cpus = append(*cpus, cpu)
 }
-func (cpus *CpuList) remove(cpu Cpu) error {
+func (cpus *CPUList) remove(cpu CPU) error {
 	index := cpus.IndexOf(cpu)
 	if index < 0 {
 		return fmt.Errorf("cpu %d is not in pool", cpu.GetID())
@@ -242,14 +238,14 @@ func (cpus *CpuList) remove(cpu Cpu) error {
 	*cpus = (*cpus)[:size]
 	return nil
 }
-func (cpus *CpuList) IDs() []uint {
+func (cpus *CPUList) IDs() []uint {
 	ids := make([]uint, len(*cpus))
 	for i, cpu := range *cpus {
 		ids[i] = cpu.GetID()
 	}
 	return ids
 }
-func (cpus *CpuList) ByID(id uint) Cpu {
+func (cpus *CPUList) ByID(id uint) CPU {
 	index := int(id)
 	// first we try index == cpuId
 	if len(*cpus) > index && (*cpus)[index].GetID() == id {
@@ -263,8 +259,8 @@ func (cpus *CpuList) ByID(id uint) Cpu {
 	}
 	return nil
 }
-func (cpus *CpuList) ManyByIDs(ids []uint) (CpuList, error) {
-	targets := make(CpuList, len(ids))
+func (cpus *CPUList) ManyByIDs(ids []uint) (CPUList, error) {
+	targets := make(CPUList, len(ids))
 
 	for i, id := range ids {
 		cpu := cpus.ByID(id)

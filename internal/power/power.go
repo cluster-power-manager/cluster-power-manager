@@ -26,7 +26,7 @@ const (
 )
 
 type LibConfig struct {
-	CpuPath    string
+	CPUPath    string
 	ModulePath string
 	Cores      uint
 }
@@ -37,24 +37,24 @@ var log = logr.Discard()
 // default declaration of defined features, defined to uninitialized state
 var featureList FeatureSet = map[featureID]*featureStatus{
 	EPPFeature: {
-		err:      uninitialisedErr,
+		err:      errUninitialized,
 		initFunc: initEpp,
 	},
 	FrequencyScalingFeature: {
-		err:      uninitialisedErr,
+		err:      errUninitialized,
 		initFunc: initScalingDriver,
 	},
 	CStatesFeature: {
-		err:      uninitialisedErr,
+		err:      errUninitialized,
 		initFunc: initCStates,
 	},
 	UncoreFeature: {
-		err:      uninitialisedErr,
+		err:      errUninitialized,
 		initFunc: initUncore,
 	},
 }
-var uninitialisedErr = fmt.Errorf("feature uninitialized")
-var undefinederr = fmt.Errorf("feature undefined")
+var errUninitialized = fmt.Errorf("feature uninitialized")
+var errUndefined = fmt.Errorf("feature undefined")
 
 // featureStatus stores feature name, driver and if feature is not supported, error describing the reason
 type featureStatus struct {
@@ -105,8 +105,8 @@ func (set *FeatureSet) anySupported() bool {
 	return false
 }
 
-// isFeatureIdSupported takes feature if, check if feature is supported on current system
-func (set *FeatureSet) isFeatureIdSupported(id featureID) bool {
+// isFeatureIDSupported takes feature if, check if feature is supported on current system
+func (set *FeatureSet) isFeatureIDSupported(id featureID) bool {
 	feature, exists := (*set)[id]
 	if !exists {
 		return false
@@ -114,11 +114,11 @@ func (set *FeatureSet) isFeatureIdSupported(id featureID) bool {
 	return feature.isSupported()
 }
 
-// getFeatureIdError retrieve any error associated with a feature
-func (set *FeatureSet) getFeatureIdError(id featureID) error {
+// getFeatureIDError retrieve any error associated with a feature
+func (set *FeatureSet) getFeatureIDError(id featureID) error {
 	feature, exists := (*set)[id]
 	if !exists {
-		return undefinederr
+		return errUndefined
 	}
 	return feature.err
 }
@@ -140,8 +140,8 @@ func CreateInstance(hostName string) (Host, error) {
 	return host, allErrors
 }
 func CreateInstanceWithConf(hostname string, conf LibConfig) (Host, error) {
-	if conf.CpuPath != "" {
-		basePath = conf.CpuPath
+	if conf.CPUPath != "" {
+		basePath = conf.CPUPath
 	}
 	if conf.ModulePath != "" {
 		kernelModulesFilePath = conf.ModulePath
@@ -160,7 +160,7 @@ var getNumberOfCpus = func() uint {
 	}
 	// Delete \n character and split the string to get
 	// first and last element
-	cpusAvailable = strings.Replace(cpusAvailable, "\n", "", -1)
+	cpusAvailable = strings.ReplaceAll(cpusAvailable, "\n", "")
 	cpuSlice := strings.Split(cpusAvailable, "-")
 	if len(cpuSlice) < 2 {
 		return uint(runtime.NumCPU())
@@ -198,7 +198,7 @@ func readUintFromFile(filePath string) (uint, error) {
 
 // reads value from a file and returns contents as a string
 func readStringFromFile(filePath string) (string, error) {
-	valueByte, err := os.ReadFile(filePath)
+	valueByte, err := os.ReadFile(filePath) //nolint:gosec
 	if err != nil {
 		return "", err
 	}
@@ -209,7 +209,7 @@ func readStringFromFile(filePath string) (string, error) {
 // return false
 func IsFeatureSupported(features ...featureID) bool {
 	for _, feature := range features {
-		if !featureList.isFeatureIdSupported(feature) {
+		if !featureList.isFeatureIDSupported(feature) {
 			return false
 		}
 	}

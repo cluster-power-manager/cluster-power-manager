@@ -98,12 +98,12 @@ func (m *hostMock) GetExclusivePool(poolName string) Pool {
 	}
 }
 
-func (m *hostMock) GetAllCpus() *CpuList {
+func (m *hostMock) GetAllCpus() *CPUList {
 	ret := m.Called().Get(0)
 	if ret == nil {
 		return nil
 	} else {
-		return ret.(*CpuList)
+		return ret.(*CPUList)
 	}
 }
 
@@ -122,7 +122,7 @@ func TestHost_initHost(t *testing.T) {
 	const hostName = "host"
 
 	// get topology fail
-	discoverTopology = func(string) (Topology, error) { return new(mockCpuTopology), fmt.Errorf("error") }
+	discoverTopology = func(string) (Topology, error) { return new(mockCPUTopology), fmt.Errorf("error") }
 	host, err := initHost(hostName)
 	assert.Nil(t, host)
 	assert.Error(t, err)
@@ -132,8 +132,8 @@ func TestHost_initHost(t *testing.T) {
 	core2 := new(cpuMock)
 	core2.On("_setPoolProperty", mock.Anything).Return()
 
-	mockedCores := CpuList{core1, core2}
-	topObj := new(mockCpuTopology)
+	mockedCores := CPUList{core1, core2}
+	topObj := new(mockCPUTopology)
 	topObj.On("CPUs").Return(&mockedCores)
 	discoverTopology = func(string) (Topology, error) { return topObj, nil }
 	host, err = initHost(hostName)
@@ -201,24 +201,24 @@ func (s *hostTestsSuite) TestRemoveExclusivePool() {
 }
 
 func (s *hostTestsSuite) TestHostImpl_SetReservedPoolCores() {
-	cores := make(CpuList, 4)
-	topology := new(mockCpuTopology)
+	cores := make(CPUList, 4)
+	topology := new(mockCPUTopology)
 	host := &hostImpl{topology: topology}
 	for i := range cores {
-		m := new(mockCpuCore)
-		core, err := newCpu(uint(i), m)
+		m := new(mockCPUCore)
+		core, err := newCPU(uint(i), m)
 		s.Nil(err)
 
 		cores[i] = core
 	}
 	topology.On("CPUs").Return(&cores)
-	host.reservedPool = &reservedPoolType{poolImpl{host: host, mutex: &sync.Mutex{}, cpus: make(CpuList, 0)}}
+	host.reservedPool = &reservedPoolType{poolImpl{host: host, mutex: &sync.Mutex{}, cpus: make(CPUList, 0)}}
 	host.sharedPool = &sharedPoolType{poolImpl{powerProfile: &profileImpl{}, mutex: &sync.Mutex{}, host: host, cpus: cores}}
 
 	for _, core := range cores {
 		core._setPoolProperty(host.sharedPool)
 	}
-	referenceCores := make(CpuList, 4)
+	referenceCores := make(CPUList, 4)
 	copy(referenceCores, cores)
 	s.Nil(host.GetReservedPool().SetCpus(referenceCores))
 	s.ElementsMatch(host.GetReservedPool().Cpus().IDs(), referenceCores.IDs())
@@ -227,13 +227,13 @@ func (s *hostTestsSuite) TestHostImpl_SetReservedPoolCores() {
 }
 
 func (s *hostTestsSuite) TestAddSharedPool() {
-	cores := make(CpuList, 4)
-	topology := new(mockCpuTopology)
+	cores := make(CPUList, 4)
+	topology := new(mockCPUTopology)
 	host := &hostImpl{topology: topology}
 	host.sharedPool = &sharedPoolType{poolImpl{powerProfile: &profileImpl{}, mutex: &sync.Mutex{}, host: host}}
 	for i := range cores {
-		m := new(mockCpuCore)
-		core, err := newCpu(uint(i), m)
+		m := new(mockCPUCore)
+		core, err := newCPU(uint(i), m)
 		s.Nil(err)
 
 		cores[i] = core
@@ -245,7 +245,7 @@ func (s *hostTestsSuite) TestAddSharedPool() {
 		core._setPoolProperty(host.reservedPool)
 	}
 
-	referenceCores := make(CpuList, 2)
+	referenceCores := make(CPUList, 2)
 	copy(referenceCores, cores[0:2])
 	s.Nil(host.GetSharedPool().SetCpus(referenceCores))
 
@@ -258,18 +258,17 @@ func (s *hostTestsSuite) TestRemoveCoreFromExclusivePool() {
 		powerProfile: &profileImpl{},
 		mutex:        &sync.Mutex{},
 	}
-	cores := make(CpuList, 4)
+	cores := make(CPUList, 4)
 	for i := range cores {
-		m := new(mockCpuCore)
-		core, err := newCpu(uint(i), m)
+		m := new(mockCPUCore)
+		core, err := newCPU(uint(i), m)
 		s.Nil(err)
 
 		cores[i] = core
 	}
 	pool.cpus = cores
 
-	topology := new(mockCpuTopology)
-	//topology.On("CPUs").Return(cores)
+	topology := new(mockCPUTopology)
 
 	host := &hostImpl{
 		name:           "test_host",
@@ -283,9 +282,9 @@ func (s *hostTestsSuite) TestRemoveCoreFromExclusivePool() {
 
 	host.sharedPool = &sharedPoolType{poolImpl{powerProfile: &profileImpl{}, mutex: &sync.Mutex{}, host: host}}
 
-	coresToRemove := make(CpuList, 2)
+	coresToRemove := make(CPUList, 2)
 	copy(coresToRemove, cores[0:2])
-	coresToPreserve := make(CpuList, 2)
+	coresToPreserve := make(CPUList, 2)
 	copy(coresToPreserve, cores[2:])
 	s.Nil(host.GetSharedPool().MoveCpus(coresToRemove))
 
@@ -295,22 +294,22 @@ func (s *hostTestsSuite) TestRemoveCoreFromExclusivePool() {
 }
 
 func (s *hostTestsSuite) TestAddCoresToExclusivePool() {
-	topology := new(mockCpuTopology)
+	topology := new(mockCPUTopology)
 	host := &hostImpl{
 		topology: topology,
 	}
 	host.exclusivePools = []Pool{&exclusivePoolType{poolImpl{
 		name:         "test",
-		cpus:         make([]Cpu, 0),
+		cpus:         make([]CPU, 0),
 		mutex:        &sync.Mutex{},
 		powerProfile: &profileImpl{},
 		host:         host,
 	}}}
 	host.name = "test_node"
-	cores := make(CpuList, 4)
+	cores := make(CPUList, 4)
 	for i := range cores {
-		m := new(mockCpuCore)
-		core, err := newCpu(uint(i), m)
+		m := new(mockCPUCore)
+		core, err := newCPU(uint(i), m)
 		s.Nil(err)
 
 		cores[i] = core
@@ -325,7 +324,7 @@ func (s *hostTestsSuite) TestAddCoresToExclusivePool() {
 	for _, core := range cores[:2] {
 		movedCoresIds = append(movedCoresIds, core.GetID())
 	}
-	s.Nil(host.GetExclusivePool("test").MoveCpuIDs(movedCoresIds))
+	s.Nil(host.GetExclusivePool("test").MoveCPUIDs(movedCoresIds))
 	unmoved := cores[2:]
 	s.ElementsMatch(host.GetSharedPool().Cpus().IDs(), unmoved.IDs())
 	s.Len(host.GetExclusivePool("test").Cpus().IDs(), 2)
@@ -334,11 +333,7 @@ func (s *hostTestsSuite) TestAddCoresToExclusivePool() {
 
 // //
 func (s *hostTestsSuite) TestUpdateProfile() {
-	//pool := new(poolMock)
 	profile := &profileImpl{name: "powah", pstates: &pstatesImpl{minFreq: intstr.FromInt(2500), maxFreq: intstr.FromInt(3200)}, cstates: cstatesImpl{states: map[string]bool{"C1": true}}}
-	//pool.On("GetPowerProfile").Return(profile)
-	//pool.On("SetPowerProfile", mock.Anything).Return(nil)
-	//pool.On("Name").Return("powah")
 	host := hostImpl{
 		sharedPool:    new(poolMock),
 		featureStates: &FeatureSet{FrequencyScalingFeature: &featureStatus{err: nil}},
@@ -379,32 +374,31 @@ func (s *hostTestsSuite) TestUpdateProfile() {
 }
 
 func (s *hostTestsSuite) TestRemoveCoresFromSharedPool() {
-	topology := new(mockCpuTopology)
+	topology := new(mockCPUTopology)
 	host := &hostImpl{topology: topology}
 	host.exclusivePools = []Pool{&poolImpl{
 		name:         "test",
-		cpus:         make([]Cpu, 0),
+		cpus:         make([]CPU, 0),
 		mutex:        &sync.Mutex{},
 		powerProfile: &profileImpl{},
 		host:         host,
 	}}
 	host.name = "test_node"
-	cores := make(CpuList, 4)
+	cores := make(CPUList, 4)
 	for i := range cores {
-		m := new(mockCpuCore)
-		core, err := newCpu(uint(i), m)
+		m := new(mockCPUCore)
+		core, err := newCPU(uint(i), m)
 		s.Nil(err)
 
 		cores[i] = core
 	}
-	//topology.On("CPUs").Return(cores)
 	host.sharedPool = &sharedPoolType{poolImpl{powerProfile: &profileImpl{}, mutex: &sync.Mutex{}, host: host, cpus: cores}}
-	host.reservedPool = &reservedPoolType{poolImpl{host: host, mutex: &sync.Mutex{}, cpus: make([]Cpu, 0)}}
+	host.reservedPool = &reservedPoolType{poolImpl{host: host, mutex: &sync.Mutex{}, cpus: make([]CPU, 0)}}
 
 	for _, core := range cores {
 		core._setPoolProperty(host.sharedPool)
 	}
-	coresCopy := make(CpuList, 4)
+	coresCopy := make(CPUList, 4)
 	copy(coresCopy, cores)
 	s.Nil(host.GetReservedPool().MoveCpus(coresCopy))
 	s.ElementsMatch(host.GetReservedPool().Cpus().IDs(), coresCopy.IDs())
@@ -423,10 +417,10 @@ func (s *hostTestsSuite) TestGetExclusivePool() {
 	s.Nil(node.GetExclusivePool("non existent"))
 }
 func (s *hostTestsSuite) TestGetSharedPool() {
-	cores := make(CpuList, 4)
+	cores := make(CPUList, 4)
 	for i := range cores {
-		m := new(mockCpuCore)
-		core, err := newCpu(uint(i), m)
+		m := new(mockCPUCore)
+		core, err := newCPU(uint(i), m)
 		s.Nil(err)
 
 		cores[i] = core
@@ -444,10 +438,10 @@ func (s *hostTestsSuite) TestGetSharedPool() {
 	s.Equal(node.sharedPool.(*sharedPoolType).powerProfile, sharedPool.powerProfile)
 }
 func (s *hostTestsSuite) TestGetReservedPool() {
-	cores := make(CpuList, 4)
+	cores := make(CPUList, 4)
 	for i := range cores {
-		m := new(mockCpuCore)
-		core, err := newCpu(uint(i), m)
+		m := new(mockCPUCore)
+		core, err := newCPU(uint(i), m)
 		s.Nil(err)
 		cores[i] = core
 	}
@@ -464,38 +458,38 @@ func (s *hostTestsSuite) TestGetReservedPool() {
 	s.Equal(reservedPool.GetPowerProfile(), poolImp.powerProfile)
 }
 func (s *hostTestsSuite) TestDeleteProfile() {
-	allCores := make(CpuList, 12)
-	sharedCores := make(CpuList, 4)
+	allCores := make(CPUList, 12)
+	sharedCores := make(CPUList, 4)
 	for i := 0; i < 4; i++ {
-		m := new(mockCpuCore)
-		core, err := newCpu(uint(i), m)
+		m := new(mockCPUCore)
+		core, err := newCPU(uint(i), m)
 		s.Nil(err)
 		allCores[i] = core
 		sharedCores[i] = core
 	}
-	sharedCoresCopy := make(CpuList, len(sharedCores))
+	sharedCoresCopy := make(CPUList, len(sharedCores))
 	copy(sharedCoresCopy, sharedCores)
 
-	p1cores := make(CpuList, 4)
+	p1cores := make(CPUList, 4)
 	for i := 4; i < 8; i++ {
-		m := new(mockCpuCore)
-		core, err := newCpu(uint(i), m)
+		m := new(mockCPUCore)
+		core, err := newCPU(uint(i), m)
 		s.Nil(err)
 		allCores[i] = core
 		p1cores[i-4] = core
 	}
-	p1copy := make([]Cpu, len(p1cores))
+	p1copy := make([]CPU, len(p1cores))
 	copy(p1copy, p1cores)
 
-	p2cores := make(CpuList, 4)
+	p2cores := make(CPUList, 4)
 	for i := 8; i < 12; i++ {
-		m := new(mockCpuCore)
-		core, err := newCpu(uint(i), m)
+		m := new(mockCPUCore)
+		core, err := newCPU(uint(i), m)
 		s.Nil(err)
 		allCores[i] = core
 		p2cores[i-8] = core
 	}
-	p2copy := make(CpuList, len(p2cores))
+	p2copy := make(CPUList, len(p2cores))
 	copy(p2copy, p2cores)
 
 	host := &hostImpl{}
@@ -525,7 +519,7 @@ func (s *hostTestsSuite) TestDeleteProfile() {
 	host.exclusivePools = exclusive
 	host.sharedPool = shared
 	host.reservedPool = &reservedPoolType{poolImpl{host: host}}
-	topology := new(mockCpuTopology)
+	topology := new(mockCPUTopology)
 	topology.On("CPUs").Return(&allCores)
 	host.topology = topology
 	for i := 0; i < 4; i++ {
@@ -537,6 +531,8 @@ func (s *hostTestsSuite) TestDeleteProfile() {
 	s.Len(host.exclusivePools, 1)
 	s.Equal("profile2", host.exclusivePools[0].(*exclusivePoolType).powerProfile.(*profileImpl).name)
 	s.ElementsMatch(host.exclusivePools[0].(*exclusivePoolType).cpus, p2copy)
-	newShared := append(sharedCoresCopy, p1copy...)
+	newShared := make(CPUList, len(sharedCoresCopy))
+	copy(newShared, sharedCoresCopy)
+	newShared = append(newShared, p1copy...)
 	s.ElementsMatch(host.GetSharedPool().Cpus().IDs(), newShared.IDs())
 }
