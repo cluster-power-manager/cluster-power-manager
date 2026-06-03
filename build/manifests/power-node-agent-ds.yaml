@@ -12,6 +12,8 @@ spec:
       namespace: power-manager
       labels:
         name: power-node-agent-pod
+      annotations:
+        k8s.v1.cni.cncf.io/networks: "[]"
     spec:
       serviceAccountName: power-manager-node-agent
       tolerations:
