@@ -4,6 +4,32 @@ This is an experimental project based on https://github.com/intel/kubernetes-pow
 discontinued). It also includes enhancements from https://github.com/AMDEPYC/kubernetes-power-manager
 (e.g. Dynamic CPU Frequency Management based on DPDK telemetry).
 
+## Table of Contents
+
+- [Introduction](#introduction)
+  - [Cluster Power Manager main responsibilities](#cluster-power-manager-main-responsibilities)
+  - [Use Cases](#use-cases)
+- [Functionality of the Cluster Power Manager](#functionality-of-the-cluster-power-manager)
+- [Building Images](#building-images)
+  - [Building Single-Architecture Images](#building-single-architecture-images)
+  - [Building Multi-Architecture Images](#building-multi-architecture-images)
+- [Deploying](#deploying)
+  - [Prerequisites](#prerequisites)
+  - [Deploying the Cluster Power Manager using kustomize](#deploying-the-cluster-power-manager-using-kustomize)
+  - [Deploying the Cluster Power Manager using Helm](#deploying-the-cluster-power-manager-using-helm)
+  - [OLM Bundle (OpenShift only)](#olm-bundle-openshift-only)
+- [Components](#components)
+  - [Power Optimization Library](#power-optimization-library)
+  - [Power Node Agent](#power-node-agent)
+  - [Power Config controller](#power-config-controller)
+  - [Power Node Config controller](#power-node-config-controller)
+  - [Power Profile Controller](#power-profile-controller)
+  - [PowerNodeState](#powernodestate)
+  - [Power Pod controller](#power-pod-controller)
+  - [Uncore Frequency - only applicable to Intel CPUs](#uncore-frequency---only-applicable-to-intel-cpus)
+  - [Error handling](#error-handling)
+- [End to end workflow](#end-to-end-workflow)
+
 ## Introduction
 
 The Cluster Power Manager is a Kubernetes Operator that has been developed to provide cluster users with a
@@ -58,8 +84,8 @@ The Cluster Power Manager supports all of the above use cases.
   - **`scaling_min_freq` and `scaling_max_freq`**
 
     - The `min` and `max` values for a core are defined in the `PowerProfile` and the tuning is done after the core has been assigned by the Native CPU Manager.
-    - The min/max frequency can be specified as an absolute value (in kHz) or as a linerar interpolation of hardware max and hardware min: `value = <hardware_min> + (hardware_max - hardware_min) * X%)`.
-    - If min/max are not specified, hardware defaults will be used.The frequency of the cores are changed by writing the new frequency value to the `/sys/devices/system/cpu/cpuN/cpufreq/scaling_max|min_freq` file for the given core.
+    - The min/max frequency can be specified as an absolute value (in kHz) or as a linear interpolation of hardware max and hardware min: `value = <hardware_min> + (hardware_max - hardware_min) * X%)`.
+    - If min/max are not specified, hardware defaults will be used. The frequency of the cores are changed by writing the new frequency value to the `/sys/devices/system/cpu/cpuN/cpufreq/scaling_max|min_freq` file for the given core.
 
   - **Scaling Drivers**
 
@@ -126,13 +152,13 @@ The Cluster Power Manager supports all of the above use cases.
 
   - **Intel**
 
-    The largest part of modern CPUs is outside the actual cores. On Intel CPUs this is part is called the "Uncore" and has
+    The largest part of modern CPUs is outside the actual cores. On Intel CPUs this part is called the "Uncore" and has
     last level caches, PCI-Express, memory controller, QPI, power management and other functionalities.
     The previous deployment pattern was that an uncore setting was applied to sets of servers that are allocated as
-    capacity for handling a particular type of workload. This is typically a one-time configuration today. The Kubenetes
+    capacity for handling a particular type of workload. This is typically a one-time configuration today. The Kubernetes
     Power Manager now makes this dynamic and through a cloud native pattern. The implication is that the cluster-level
-    capacity for the workload can then configured dynamically, as well as scaled dynamically. Uncore frequency applies to
-    Xeon scalable and D processors could save up to 40% of CPU power or improved performance gains.
+    capacity for the workload can then be configured dynamically, as well as scaled dynamically. Uncore frequency applies to
+    Xeon scalable and D processors and could save up to 40% of CPU power or improved performance gains.
 
   - **AMD**
 
@@ -151,72 +177,11 @@ The Cluster Power Manager supports all of the above use cases.
 
     In AMD CPM, the following logic applies when configuring DF P-states:
     - When min equals max, a fixed DF P-state is set. This disables automatic DF p-state scaling and locks the DF to operate at that specific performance level.
-    - When min differs max, DF is allowed to dynamically scale between the specified DF P-states range.
+    - When min differs from max, DF is allowed to dynamically scale between the specified DF P-states range.
 
     This is not currently supported in CPM.
 
   - **ARM** - no equivalent supported
-
-## Prerequisites
-
-- **Node Feature Discovery** ([NFD](https://github.com/kubernetes-sigs/node-feature-discovery)) should be deployed in
-  the cluster before running the Cluster Power Manager.
-  NFD is used to detect node-level features such as *Intel Speed Select Technology - Base Frequency (SST-BF)*.
-  Once detected, the user can instruct the Cluster Power Manager to deploy the Power Node Agent to Nodes with
-  SST-specific labels, allowing the Power Node Agent to take advantage of such features by configuring cores on the
-  host to optimise performance for containerized workloads.
-  
-  > **Note: NFD is recommended, but not essential. Node labels can also be applied manually. See
-  the [NFD repo](https://github.com/kubernetes-sigs/node-feature-discovery#feature-labels) for a full list of features
-  labels.**
-
-- If not using NFD or labels added through NFD, label the node manually with a label of your choosing:
-
-  ```console
-  kubectl label node <node-name> feature.node.kubernetes.io/power-node=true
-  ```
-
-  > Note: Make sure to use the same label in the `PowerConfig`, under `spec.powerNodeSelector`.
-
-- **cert-manager** (vanilla Kubernetes only) — Required for webhook TLS certificate provisioning. On OpenShift,
-  certificates are managed automatically by the service-ca operator. cert-manager must be installed and ready
-  before deploying the Cluster Power Manager.
-
-  Install cert-manager using kubectl:
-
-  ```console
-  kubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.yaml
-  ```
-
-  Or using Helm (OCI registry):
-
-  ```console
-  helm install cert-manager oci://quay.io/jetstack/charts/cert-manager \
-    --namespace cert-manager \
-    --create-namespace \
-    --set crds.enabled=true
-  ```
-
-  Verify cert-manager is ready before proceeding:
-
-  ```console
-  kubectl wait --for=condition=Available deployment --all -n cert-manager --timeout=120s
-  ```
-
-  For more details, see the [official cert-manager installation guide](https://cert-manager.io/docs/installation/).
-  To uninstall, see the [cert-manager uninstall guide](https://cert-manager.io/docs/installation/uninstall/).
-
-- **Important**: In the kubelet configuration file the `cpuManagerPolicy` has to set to `static`, and the
-  `reservedSystemCPUs` must be set to the desired value (full file [here](./examples/example-kubelet-configuration.yaml)):
-
-  ```yaml
-  apiVersion: kubelet.config.k8s.io/v1beta1
-  ...
-  cpuManagerPolicy: "static"
-  ...
-  reservedSystemCPUs: "0"
-  ...
-  ```
 
 ## Building Images
 
@@ -333,7 +298,73 @@ podman manifest inspect ghcr.io/<user/org>/cluster-power-manager-operator:latest
 docker buildx imagetools inspect ghcr.io/<user/org>/cluster-power-manager-operator:latest
 ```
 
-## Deploying the Cluster Power Manager using kustomize
+## Deploying
+
+### Prerequisites
+
+- **Node Feature Discovery** ([NFD](https://github.com/kubernetes-sigs/node-feature-discovery)) can be deployed in
+  the cluster before running the Cluster Power Manager.
+  NFD is used to detect node-level features and label the node accordingly. Once detected, the user can instruct
+  the Cluster Power Manager to deploy the Power Node Agent to Nodes with specific labels, allowing the Power Node
+  Agent to take advantage of such features by configuring cores on the host to optimise performance for
+  containerized workloads.
+  > **Note: NFD is recommended, but not essential. Node labels can also be applied manually. See
+  the [NFD repo](https://github.com/kubernetes-sigs/node-feature-discovery#feature-labels) for a full list of features
+  labels.**
+
+  - If not using NFD or labels added through NFD, label the node manually with a label of your choosing:
+
+    ```console
+    kubectl label node <node-name> feature.node.kubernetes.io/power-node=true
+    ```
+
+    > Note: Make sure to use the same label in the `PowerConfig`, under `spec.powerNodeSelector`.
+
+- **cert-manager** (vanilla Kubernetes only) — Required for webhook TLS certificate provisioning. On OpenShift,
+  certificates are managed automatically by the service-ca operator. cert-manager must be installed and ready
+  before deploying the Cluster Power Manager.
+
+  Install cert-manager using kubectl:
+
+  ```console
+  kubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.yaml
+  ```
+
+  Or using Helm (OCI registry):
+
+  ```console
+  helm install cert-manager oci://quay.io/jetstack/charts/cert-manager \
+    --namespace cert-manager \
+    --create-namespace \
+    --set crds.enabled=true
+  ```
+
+  Verify cert-manager is ready before proceeding:
+
+  ```console
+  kubectl wait --for=condition=Available deployment --all -n cert-manager --timeout=120s
+  ```
+
+  For more details, see the [official cert-manager installation guide](https://cert-manager.io/docs/installation/).
+  To uninstall, see the [cert-manager uninstall guide](https://cert-manager.io/docs/installation/uninstall/).
+
+- **kubelet configuration**: In the kubelet configuration file the `cpuManagerPolicy` has to be set to `static`, and the
+  `reservedSystemCPUs` must be set to the desired value:
+
+  ```yaml
+  apiVersion: kubelet.config.k8s.io/v1beta1
+  ...
+  cpuManagerPolicy: "static"
+  ...
+  reservedSystemCPUs: "0"
+  ...
+  ```
+
+- **disable conflicting power management**: If another component that configures power management is deployed
+  (e.g. the cluster-node-tuning-operator on OpenShift), it must be configured to avoid conflicts with CPM. For the
+  cluster-node-tuning-operator, this requires a Tuned CR to be applied to disable the [cpu] and [uncore] plugins.
+
+### Deploying the Cluster Power Manager using kustomize
 
 Install the CRDs and deploy the operator:
 
@@ -352,7 +383,7 @@ VERSION=<tag> \
 make install deploy
 ```
 
-## Deploying the Cluster Power Manager using Helm
+### Deploying the Cluster Power Manager using Helm
 
 The Cluster Power Manager includes a helm chart for the latest releases, allowing the user to easily deploy
 everything that is needed for the overarching operator and the node agent to run. The following versions are
@@ -389,13 +420,13 @@ You can use the HELM_CHART and OCP parameters to deploy an older or Openshift sp
 
 Please note when installing older versions that certain features listed in this README may not be supported.
 
-## OLM Bundle (OpenShift only)
+### OLM Bundle (OpenShift only)
 
-The OLM bundle is **OCP-specific** and is used to package the operator for deployment via
+The OLM bundle is **OpenShift specific** and is used to package the operator for deployment via
 OLM on OpenShift clusters. The `bundle/` directory is not checked into version control — it
 is generated on demand by `make bundle`. All OLM-related Makefile targets require `OCP=true`.
 
-### Building and deploying via OLM bundle
+#### Building and deploying via OLM bundle
 
 1. **Build and push operator and agent images:**
 
@@ -462,7 +493,7 @@ extended resources that can be requested in the PodSpec. The Kubelet can then ke
 The extended resources can control how many cores on the system can be run at a higher frequency and help avoid hitting
 the heat threshold which would limit frequencies.
 
-**Note**: Only one `PowerConfig` can be present in a cluster. The Config Controller will ignore and delete and subsequent
+**Note**: Only one `PowerConfig` can be present in a cluster. The Config Controller will ignore and delete any subsequent
 PowerConfigs created after the first.
 
 **Example:**
