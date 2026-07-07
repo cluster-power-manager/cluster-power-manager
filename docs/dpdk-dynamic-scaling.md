@@ -2,9 +2,17 @@
 
 ## Overview
 
-- This feature dynamically adjusts CPU frequency for DPDK polling applications based on the DPDK usage metric. The Cluster Power Manager (CPM) samples per‑CPU
-usage exposed by the DPDK telemetry socket, computes a windowed utilization for each CPU, and steers the CPU frequency to keep that utilization near a target band.
-- Actuation is done through the Linux cpufreq subsystem using the `userspace` governor, which allows CPM to set explicit target frequencies.
+- This feature dynamically adjusts CPU frequency for DPDK polling applications based on the
+[DPDK Telemetry](https://doc.dpdk.org/guides/howto/telemetry.html) `/eal/lcore/usage` metric.
+The Cluster Power Manager (CPM) samples per‑CPU usage exposed by the DPDK telemetry socket,
+computes a windowed utilization for each CPU, and steers the CPU frequency to keep that
+utilization near a target band.
+- Actuation is done through the Linux cpufreq subsystem using the `userspace` governor, which
+allows CPM to set explicit target frequencies.
+- To use this feature with a DPDK application, the application must register a callback for a
+standard DPDK telemetry endpoint (/eal/lcore/usage). An
+[example callback](https://github.com/DPDK/dpdk/blob/95e85ea4d65d74655217166012896fc5d0b40a4e/app/test-pmd/testpmd.c#L2383)
+can be found in the DPDK test-pmd application.
 
 ## How it works
 
@@ -34,7 +42,7 @@ spec:
 ```
 
 - `workloadType`: must be `polling-dpdk` to enable this feature for a profile.
-- `samplePeriod`: interval at which the agent samples usage and decides whether to adjust CPU frequency
+- `samplePeriod`: interval at which the agent samples usage and decides whether to adjust CPU frequency.
 - `cooldownPeriod`: waiting time after a frequency change before another adjustment for the same CPU is considered.
 - `targetUsage`: desired usage percentage for each managed CPU.
 - `allowedUsageDifference`: deadband around the target; when usage is within this band, the scaler holds the current target.
