@@ -248,31 +248,27 @@ uninstall: manifests kustomize
 	$(KUSTOMIZE) build config/crd | kubectl delete -f -
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
+# Set OCP=true to deploy with OpenShift-specific resources (SCC, service-ca).
 deploy: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+ifeq (true, $(OCP))
+	$(KUSTOMIZE) build config/ocp | kubectl apply -f -
+else
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
+endif
 
 # Undeploy controller from the K8s cluster specified in ~/.kube/config.
 undeploy:
+ifeq (true, $(OCP))
+	$(KUSTOMIZE) build config/ocp | kubectl delete -f -
+else
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
+endif
 
 # Generate manifests e.g. CRD, RBAC etc.
+# OCP-specific resources are handled by the config/ocp/ kustomize overlay at deploy time,
+# so no sed patching of kustomization files is needed here.
 manifests: controller-gen
-ifeq (false, $(OCP))
-	sed -i 's|- .*\/rbac\.yaml|- \.\/rbac.yaml|' config/rbac/kustomization.yaml
-	sed -i 's|- .*\/role\.yaml|- \.\/role.yaml|' config/rbac/kustomization.yaml
-	sed -i '\|- \.\./certmanager$$|d' config/default/kustomization.yaml
-	sed -i '\|- \.\./webhook$$|a\- ../certmanager' config/default/kustomization.yaml
-	sed -i 's|- path: ocp/webhookcainjection_patch\.yaml$$|- path: webhookcainjection_patch.yaml|' config/default/kustomization.yaml
-	sed -i '\|- path: certmanager_replacements\.yaml$$|d' config/default/kustomization.yaml
-	sed -i '\|replacements:$$|a\- path: certmanager_replacements.yaml' config/default/kustomization.yaml
-else
-	sed -i 's|- .*\/rbac\.yaml|- \.\/ocp\/rbac.yaml|' config/rbac/kustomization.yaml
-	sed -i 's|- .*\/role\.yaml|- \.\/ocp\/role.yaml|' config/rbac/kustomization.yaml
-	sed -i '\|- \.\./certmanager$$|d' config/default/kustomization.yaml
-	sed -i 's|- path: webhookcainjection_patch\.yaml$$|- path: ocp/webhookcainjection_patch.yaml|' config/default/kustomization.yaml
-	sed -i '\|- path: certmanager_replacements\.yaml$$|d' config/default/kustomization.yaml
-endif
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 # Run go fmt against code
