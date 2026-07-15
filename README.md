@@ -366,6 +366,16 @@ docker buildx imagetools inspect ghcr.io/<user/org>/cluster-power-manager-operat
 
 ### Deploying the Cluster Power Manager using kustomize
 
+The project provides two kustomize overlays selected by the `OCP` variable (default: `false`):
+
+| | Vanilla Kubernetes (`OCP=false`) | OpenShift (`OCP=true`) |
+|---|---|---|
+| Kustomize overlay | `config/default/` | `config/ocp/` |
+| Webhook TLS | cert-manager (must be installed separately) | OpenShift service-ca operator (built-in) |
+| RBAC | Standard K8s roles | Adds SCC `use privileged` permissions |
+| Image base | Community base image | UBI base image (`make images-ocp`) |
+| OLM bundle | Not supported | Supported (`make bundle`) |
+
 Install the CRDs and deploy the operator:
 
 ```console
