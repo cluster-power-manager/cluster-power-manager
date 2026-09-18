@@ -11,6 +11,7 @@ discontinued). It also includes enhancements from https://github.com/AMDEPYC/kub
   - [Use Cases](#use-cases)
 - [Functionality of the Cluster Power Manager](#functionality-of-the-cluster-power-manager)
 - [Building Images](#building-images)
+  - [Recommended image workflow](#recommended-image-workflow)
   - [Building Single-Architecture Images](#building-single-architecture-images)
   - [Building Multi-Architecture Images](#building-multi-architecture-images)
 - [Deploying](#deploying)
@@ -186,8 +187,17 @@ The Cluster Power Manager supports all of the above use cases.
 ## Building Images
 
 The Cluster Power Manager requires two container images: the **Power Operator** (manager) and the **Power Node Agent**.
-Image references in the deployment manifests are automatically updated when building images via `make update`,
-which runs as a prerequisite of all image build targets.
+
+### Recommended image workflow
+
+1. Build and push the operator and node-agent images using the single-architecture or multi-architecture targets
+   documented below. The image-building targets depend on `update-agent-image`, which updates
+   `build/manifests/power-node-agent-ds.yaml`, the node-agent manifest embedded in the operator image, before the
+   images are built.
+2. Install the CRDs and deploy the manager image using the commands in
+   [Deploying the Cluster Power Manager using kustomize](#deploying-the-cluster-power-manager-using-kustomize).
+   The `deploy` target derives the manager image from `IMAGE_REGISTRY` and `VERSION` and applies it through
+   Kustomize. It does not run `update-agent-image`.
 
 ### Building Single-Architecture Images
 

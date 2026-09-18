@@ -191,11 +191,11 @@ verify-build: gofmt test race coverage tidy clean verify-test
 	CGO_ENABLED=0 GOOS=linux GOARCH=$(GOARCH) GO111MODULE=on go build -a -o build/bin/nodeagent build/nodeagent/main.go	
 
 # Build the Manager and Node Agent images
-images: update generate manifests
+images: update-agent-image generate manifests
 	 $(IMGTOOL) build -f build/Dockerfile --platform $(PLATFORM) -t ${IMG} .
 	 $(IMGTOOL) build -f build/Dockerfile.nodeagent --platform $(PLATFORM) -t ${IMG_AGENT} .
 
-images-ocp: update generate manifests
+images-ocp: update-agent-image generate manifests
 	 echo "Building images for OCP $(IMG) and $(IMG_AGENT)"
 	 $(IMGTOOL) build --build-arg="BASE_IMAGE=$(OCP_IMAGE)" -f build/Dockerfile --platform $(PLATFORM) -t ${IMG} .
 	 $(IMGTOOL) build --build-arg="BASE_IMAGE=$(OCP_IMAGE)" -f build/Dockerfile.nodeagent --platform $(PLATFORM) -t ${IMG_AGENT} .
@@ -313,7 +313,7 @@ build-agent-ocp:
 .PHONY: build-push-multiarch
 # Build and push multi-architecture images for both operator and agent
 # Set OCP=true for OpenShift builds (default: false)
-build-push-multiarch: update generate manifests
+build-push-multiarch: update-agent-image generate manifests
 ifeq (true, $(OCP))
 	@echo "Building and pushing multi-arch OCP images for platforms: $(PLATFORMS)"
 else
@@ -391,7 +391,7 @@ endif
 # Generate bundle manifests and metadata, then validate generated files.
 # OLM bundle targets are OCP-specific and require OCP=true.
 ifeq (true, $(OCP))
-bundle: update manifests kustomize operator-sdk
+bundle: update-agent-image manifests kustomize operator-sdk
 # directory used to get image name for bundle
 	$(OPERATOR_SDK) generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
@@ -514,9 +514,9 @@ clean:
 gofmt:
 	gofmt -w .
 
-update:
+.PHONY: update-agent-image
+update-agent-image:
 	sed -i 's|image: .*|image: $(IMG_AGENT)|' build/manifests/power-node-agent-ds.yaml
-	sed -i 's|image: .*|image: $(IMG)|' config/manager/manager.yaml
 
 # markdownlint rules, following: https://github.com/openshift/enhancements/blob/master/Makefile
 .PHONY: markdownlint-image
