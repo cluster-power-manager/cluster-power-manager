@@ -33,7 +33,7 @@ spec:
             - --zap-log-level
             - "3"
           imagePullPolicy: IfNotPresent
-          image: ghcr.io/cluster-power-manager/cluster-power-manager-operator:latest
+          image: controller:latest
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
