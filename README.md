@@ -428,7 +428,7 @@ make install deploy
 
 Use the local Helm charts to deploy the Cluster Power Manager on vanilla Kubernetes. Install
 [Helm](https://helm.sh/docs/intro/install/) and ensure cert-manager is ready as described in
-[Prerequisites](#prerequisites).
+[Prerequisites](#prerequisites). The `helm-install` target rejects `OCP=true`.
 
 The charts deploy:
 
@@ -438,9 +438,11 @@ The charts deploy:
 - The operator deployment itself
 - The operator's power config
 - A shared power profile
-- A cert-manager Issuer and serving Certificate, and the webhook Service
+- A cert-manager Issuer and serving Certificate, the webhook Service, and validating webhook registration
 
 cert-manager creates the TLS Secret, which the chart mounts into the manager for its webhook server.
+It also injects the certificate authority into the validating webhook configuration. Kubernetes then sends
+PowerNodeConfig, PowerProfile, and Uncore admission requests to the manager for validation.
 
 Install or update the operator using the default GHCR images:
 
@@ -472,6 +474,7 @@ Verify the serving certificate and both workloads:
 ```console
 kubectl -n power-manager wait --for=condition=Ready certificate/controller-manager-serving-cert --timeout=5m
 kubectl -n power-manager rollout status deploy/controller-manager --timeout=5m
+kubectl get validatingwebhookconfiguration controller-manager-validating-webhook-configuration
 kubectl -n power-manager wait --for=create ds/power-node-agent --timeout=5m
 kubectl -n power-manager rollout status ds/power-node-agent --timeout=5m
 ```

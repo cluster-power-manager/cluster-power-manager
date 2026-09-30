@@ -285,7 +285,7 @@ func (r *PowerConfigReconciler) createDaemonSetIfNotPresent(c context.Context, p
 				logger.Error(err, "error creating the daemonSet")
 				return err
 			}
-			if err := applyNodeAgentImage(daemonSet, os.Getenv(relatedImageNodeAgentEnv)); err != nil {
+			if _, err := applyNodeAgentImage(daemonSet, os.Getenv(relatedImageNodeAgentEnv)); err != nil {
 				return err
 			}
 			if len(powerConfig.Spec.PowerNodeSelector) != 0 {
@@ -303,16 +303,9 @@ func (r *PowerConfigReconciler) createDaemonSetIfNotPresent(c context.Context, p
 	}
 
 	// Update the existing DaemonSet when its image or node selector changes.
-	changed := false
-	if relatedImage := os.Getenv(relatedImageNodeAgentEnv); relatedImage != "" {
-		container := findNodeAgentContainer(daemonSet.Spec.Template.Spec.Containers)
-		if container == nil {
-			return fmt.Errorf("container %q not found in node-agent DaemonSet", NodeAgentDSName)
-		}
-		if container.Image != relatedImage {
-			container.Image = relatedImage
-			changed = true
-		}
+	changed, err := applyNodeAgentImage(daemonSet, os.Getenv(relatedImageNodeAgentEnv))
+	if err != nil {
+		return err
 	}
 	if !reflect.DeepEqual(daemonSet.Spec.Template.Spec.NodeSelector, powerConfig.Spec.PowerNodeSelector) {
 		daemonSet.Spec.Template.Spec.NodeSelector = powerConfig.Spec.PowerNodeSelector
@@ -339,17 +332,20 @@ func findNodeAgentContainer(containers []corev1.Container) *corev1.Container {
 	return nil
 }
 
-func applyNodeAgentImage(ds *appsv1.DaemonSet, image string) error {
+func applyNodeAgentImage(ds *appsv1.DaemonSet, image string) (imageChanged bool, err error) {
 	if image == "" {
-		return nil
+		return false, nil
 	}
 
 	container := findNodeAgentContainer(ds.Spec.Template.Spec.Containers)
 	if container == nil {
-		return fmt.Errorf("container %q not found in node-agent DaemonSet", NodeAgentDSName)
+		return false, fmt.Errorf("container %q not found in node-agent DaemonSet", NodeAgentDSName)
+	}
+	if container.Image == image {
+		return false, nil
 	}
 	container.Image = image
-	return nil
+	return true, nil
 }
 
 func createDaemonSetFromManifest(path string) (*appsv1.DaemonSet, error) {

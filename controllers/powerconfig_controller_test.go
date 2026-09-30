@@ -214,7 +214,7 @@ func TestPowerConfigDaemonSet(t *testing.T) {
 		t.Setenv(relatedImageNodeAgentEnv, overrideImage)
 
 		t.Run("new DaemonSet", func(t *testing.T) {
-			err := applyNodeAgentImage(&appsv1.DaemonSet{}, overrideImage)
+			_, err := applyNodeAgentImage(&appsv1.DaemonSet{}, overrideImage)
 			assert.ErrorContains(t, err, "container \"power-node-agent\" not found")
 		})
 

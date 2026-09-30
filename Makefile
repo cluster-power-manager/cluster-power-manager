@@ -218,17 +218,17 @@ run-agent: generate fmt vet manifests
 
 .PHONY: helm-install helm-uninstall 
 helm-install:
-ifeq (true, $(OCP))
-	$(eval HELM_FLAG:=--set ocp=true)
-	$(eval OCP_SUFFIX:=_ocp-$(OCP_VERSION))
-endif
+	@if [ "$(OCP)" = "true" ]; then \
+		echo "helm-install supports vanilla Kubernetes only; omit OCP=true"; \
+		exit 1; \
+	fi
 	sed -i 's/^version:.*$$/version: $(HELM_VERSION)/' helm/cluster-power-manager/Chart.yaml 
 	sed -i 's/^appVersion:.*$$/appVersion: \"$(HELM_CHART)\"/' helm/cluster-power-manager/Chart.yaml
 	sed -i 's/^version:.*$$/version: $(HELM_VERSION)/' helm/crds/Chart.yaml 
 	sed -i 's/^appVersion:.*$$/appVersion: \"$(HELM_CHART)\"/' helm/crds/Chart.yaml 
 	helm upgrade --install cluster-power-manager-crds ./helm/crds
 	helm dependency update ./helm/cluster-power-manager
-	helm upgrade --install cluster-power-manager-$(HELM_CHART) ./helm/cluster-power-manager $(HELM_FLAG) \
+	helm upgrade --install cluster-power-manager-$(HELM_CHART) ./helm/cluster-power-manager \
 		--set-string operator.container.image="$(IMG)" \
 		--set-string agent.container.image="$(IMG_AGENT)"
 
