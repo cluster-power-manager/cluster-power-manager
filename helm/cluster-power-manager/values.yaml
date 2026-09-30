@@ -205,6 +205,11 @@ operator:
       limits: 30Mi
       requests: 30Mi
 
+# Image for the node-agent DaemonSet created by the operator
+agent:
+  container:
+    image: ghcr.io/cluster-power-manager/cluster-power-node-agent:latest
+
 # Values for the PowerConfig
 powerconfig:
   name: power-config
