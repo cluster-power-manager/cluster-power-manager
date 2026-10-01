@@ -229,6 +229,7 @@ helm-install:
 	helm upgrade --install cluster-power-manager-crds ./helm/crds
 	helm dependency update ./helm/cluster-power-manager
 	helm upgrade --install cluster-power-manager-$(HELM_CHART) ./helm/cluster-power-manager \
+		--wait \
 		--set-string operator.container.image="$(IMG)" \
 		--set-string agent.container.image="$(IMG_AGENT)"
 

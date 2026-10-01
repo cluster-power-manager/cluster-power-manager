@@ -437,12 +437,13 @@ The charts deploy:
 - The RBAC rules for the operator and node agent
 - The operator deployment itself
 - The operator's power config
-- A shared power profile
 - A cert-manager Issuer and serving Certificate, the webhook Service, and validating webhook registration
 
 cert-manager creates the TLS Secret, which the chart mounts into the manager for its webhook server.
 It also injects the certificate authority into the validating webhook configuration. Kubernetes then sends
 PowerNodeConfig, PowerProfile, and Uncore admission requests to the manager for validation.
+Create shared and unshared PowerProfiles separately to suit your nodes and workloads. The chart does not create
+PowerProfiles.
 
 Install or update the operator using the default GHCR images:
 
