@@ -1,15 +1,17 @@
-ARG BASE_IMAGE=registry.fedoraproject.org/fedora-minimal:42
 ARG BUILDER_IMAGE=quay.io/projectquay/golang:1.24
+ARG RUNTIME_IMAGE=registry.fedoraproject.org/fedora-minimal:42
+ARG STRICTFIPS="false"
 
 # Build the node agent binary
 FROM --platform=$BUILDPLATFORM ${BUILDER_IMAGE} AS builder
 ARG TARGETOS \
     TARGETARCH
+ARG STRICTFIPS
 
 # Go toolchain settings, consumed directly by the go command. The defaults
-# produce a static binary suitable for the default fedora-minimal BASE_IMAGE.
+# produce a static binary suitable for the default fedora-minimal RUNTIME_IMAGE.
 # Overriding CGO_ENABLED=1 yields a dynamically linked binary and requires a
-# BASE_IMAGE that provides a dynamic loader and the needed shared libraries.
+# RUNTIME_IMAGE that provides a dynamic loader and the needed shared libraries.
 ARG CGO_ENABLED=0
 ARG GOFLAGS
 ARG GOEXPERIMENT
@@ -35,9 +37,16 @@ RUN mkdir -p /install_root/etc \
     && tail -1 /etc/passwd > /install_root/etc/passwd
 
 # Build
-RUN GO111MODULE=on GOOS=${TARGETOS:-linux} GOARCH=$TARGETARCH go build -a -o /install_root/nodeagent ./main.go
+RUN if [ "${STRICTFIPS}" = "true" ]; then \
+      CGO_ENABLED=1 GO111MODULE=on GOOS=${TARGETOS:-linux} GOARCH=$TARGETARCH \
+        go build -tags strictfipsruntime -a -o /install_root/nodeagent ./main.go; \
+    else \
+      GO111MODULE=on GOOS=${TARGETOS:-linux} GOARCH=$TARGETARCH \
+        go build -a -o /install_root/nodeagent ./main.go; \
+    fi
 
-FROM ${BASE_IMAGE}
+FROM ${RUNTIME_IMAGE}
+RUN microdnf -y install util-linux-core && microdnf clean all
 WORKDIR /
 COPY LICENSE /licenses/LICENSE
 COPY --from=builder /install_root .
