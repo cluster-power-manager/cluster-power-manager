@@ -13,8 +13,6 @@ resources:
   - leader_election_role_binding.yaml
   - daemonset_role.yaml
   - daemonset_role_binding.yaml
-  - user_role.yaml
-  - user_role_binding.yaml
   # we're adding the namespace in the config/default/kustomize.yaml
   # - namespace.yaml
   - uncore_editor_role.yaml
