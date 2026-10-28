@@ -98,7 +98,7 @@ func createPodReconcilerObject(objs []runtime.Object, podResourcesClient *podres
 
 	// create a fake client to mock API calls.
 	cl := fake.NewClientBuilder().
-		WithRuntimeObjects(objs...).
+		WithRuntimeObjects(transformPodsForCache(objs)...).
 		WithStatusSubresource(&powerv1alpha1.PowerNodeState{}).
 		Build()
 	state, err := podstate.NewState()
@@ -2143,7 +2143,7 @@ func TestPowerPod_RestartRace_SharedPoolNotReady(t *testing.T) {
 	_ = powerv1alpha1.AddToScheme(s)
 
 	cl := fake.NewClientBuilder().
-		WithRuntimeObjects(objs...).
+		WithRuntimeObjects(transformPodsForCache(objs)...).
 		WithStatusSubresource(&powerv1alpha1.PowerNodeState{}).
 		Build()
 

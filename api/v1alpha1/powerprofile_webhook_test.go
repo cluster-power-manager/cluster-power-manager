@@ -18,6 +18,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/cluster-power-manager/cluster-power-manager/pkg/transform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -26,7 +27,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func testPod(name, namespace string, resources corev1.ResourceList) *corev1.Pod {
+// rawTestPod builds a complete Pod, as the API server stores it. Use it when
+// the Pod is created against a real API server (envtest): the shared cache
+// transform drops required fields such as container images.
+func rawTestPod(name, namespace string, resources corev1.ResourceList) *corev1.Pod {
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
 		Spec: corev1.PodSpec{
@@ -42,6 +46,16 @@ func testPod(name, namespace string, resources corev1.ResourceList) *corev1.Pod 
 			},
 		},
 	}
+}
+
+// testPod returns the Pod as the informer cache holds it: the manager and node-agent
+// cache transformed Pods, so the webhook never observes the dropped fields.
+func testPod(name, namespace string, resources corev1.ResourceList) *corev1.Pod {
+	transformed, err := transform.TransformPodForCache(rawTestPod(name, namespace, resources))
+	if err != nil {
+		panic(err)
+	}
+	return transformed.(*corev1.Pod)
 }
 
 func TestPowerProfileValidatePowerNodeConfigReferences(t *testing.T) {

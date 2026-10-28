@@ -199,11 +199,9 @@ operator:
     image: ghcr.io/cluster-power-manager/cluster-power-manager-operator:latest
     name: manager
     cpu:
-      limits: 100m
-      requests: 100m
+      requests: 200m
     memory:
-      limits: 30Mi
-      requests: 30Mi
+      requests: 256Mi
 
 # Image for the node-agent DaemonSet created by the operator
 agent:

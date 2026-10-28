@@ -37,9 +37,6 @@ spec:
           name: webhook-server
           protocol: TCP
         resources:
-          limits:
-            cpu: {{ .Values.operator.container.cpu.limits }}
-            memory: {{ .Values.operator.container.memory.limits }}
           requests:
             cpu: {{ .Values.operator.container.cpu.requests }}
             memory: {{ .Values.operator.container.memory.requests }}

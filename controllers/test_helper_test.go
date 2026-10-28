@@ -12,8 +12,10 @@ import (
 
 	"github.com/cluster-power-manager/cluster-power-manager/internal/power"
 	"github.com/cluster-power-manager/cluster-power-manager/internal/scaling"
+	"github.com/cluster-power-manager/cluster-power-manager/pkg/transform"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/mock"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -771,4 +773,44 @@ func (f *fieldIndexerMock) IndexField(_ context.Context, _ client.Object, _ stri
 type cacheMk struct {
 	cache.Cache
 	mock.Mock
+}
+
+// transformPodForCache overwrites obj in place with the transform the manager and
+// node-agent informer caches apply to Pods. Non-Pod objects are left untouched.
+func transformPodForCache(obj client.Object) error {
+	pod, ok := obj.(*corev1.Pod)
+	if !ok {
+		return nil
+	}
+	transformed, err := transform.TransformPodForCache(pod)
+	if err != nil {
+		return err
+	}
+	*pod = *transformed.(*corev1.Pod)
+	return nil
+}
+
+// transformPodsForCache returns copies of objs with every Pod transformed to the
+// cached shape, so tests exercise the same Pod fields production code sees.
+func transformPodsForCache(objs []runtime.Object) []runtime.Object {
+	out := make([]runtime.Object, len(objs))
+	for i, obj := range objs {
+		pod, ok := obj.(*corev1.Pod)
+		if !ok {
+			out[i] = obj
+			continue
+		}
+		transformed := pod.DeepCopy()
+		if err := transformPodForCache(transformed); err != nil {
+			panic(fmt.Sprintf("transforming pod %s/%s for cache: %v", pod.Namespace, pod.Name, err))
+		}
+		if !transformed.DeletionTimestamp.IsZero() && len(transformed.Finalizers) == 0 {
+			// The transform drops finalizers, but the fake client refuses to
+			// store a terminating object without one. Real terminating Pods
+			// always carry at least one finalizer.
+			transformed.Finalizers = []string{"test.invalid/finalizer"}
+		}
+		out[i] = transformed
+	}
+	return out
 }

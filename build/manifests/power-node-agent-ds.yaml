@@ -32,11 +32,9 @@ spec:
                 fieldRef:
                   fieldPath: spec.nodeName
           resources:
-            limits:
-              memory: 128Mi
             requests:
-              cpu: 100m
-              memory: 128Mi
+              cpu: 200m
+              memory: 256Mi
           volumeMounts:
             - mountPath: /sys/devices/system/cpu
               name: cpusetup

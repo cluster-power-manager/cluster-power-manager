@@ -47,12 +47,9 @@ spec:
             - name: RELATED_IMAGE_NODE_AGENT
               value: node-agent:latest
           resources:
-            limits:
-              cpu: 100m
-              memory: 64Mi
             requests:
-              cpu: 100m
-              memory: 64Mi
+              cpu: 200m
+              memory: 256Mi
           volumeMounts:
             - mountPath: /sys/fs/cgroup
               name: cgroup

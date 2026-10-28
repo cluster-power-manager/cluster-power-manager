@@ -35,6 +35,36 @@ import (
 // Initialized in TestMain, available to all envtest tests.
 var envTestClient client.Client
 
+// transformClient applies the shared Pod cache transform to Pod reads, so
+// reconcilers under test see the same object shape they see in production
+// while writes still use complete objects for the envtest API server.
+type transformClient struct {
+	client.Client
+}
+
+func (c transformClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+	if err := c.Client.Get(ctx, key, obj, opts...); err != nil {
+		return err
+	}
+	return transformPodForCache(obj)
+}
+
+func (c transformClient) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+	if err := c.Client.List(ctx, list, opts...); err != nil {
+		return err
+	}
+	podList, ok := list.(*corev1.PodList)
+	if !ok {
+		return nil
+	}
+	for i := range podList.Items {
+		if err := transformPodForCache(&podList.Items[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // TestMain starts a single envtest API server for the entire envtest suite,
 // runs all tests, then tears it down. This avoids the cost of starting/stopping
 // envtest per test.

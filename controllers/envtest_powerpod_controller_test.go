@@ -70,7 +70,9 @@ func createPodReconcilerWithEnvTest(
 	}
 
 	return &PowerPodReconciler{
-		Client:             cl,
+		// Wrap the API client so the reconciler reads transformed Pods, matching
+		// what the informer caches in production.
+		Client:             transformClient{Client: cl},
 		Log:                ctrl.Log.WithName("testing"),
 		Scheme:             s,
 		State:              state,

@@ -17,22 +17,28 @@ limitations under the License.
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
 
 	"go.uber.org/zap/zapcore"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	powerv1alpha1 "github.com/cluster-power-manager/cluster-power-manager/api/v1alpha1"
 	"github.com/cluster-power-manager/cluster-power-manager/internal/scaling"
 	"github.com/cluster-power-manager/cluster-power-manager/pkg/podresourcesclient"
+	"github.com/cluster-power-manager/cluster-power-manager/pkg/transform"
 
 	"github.com/cluster-power-manager/cluster-power-manager/controllers"
 	"github.com/cluster-power-manager/cluster-power-manager/internal/power"
@@ -68,10 +74,34 @@ func main() {
 	),
 	)
 	nodeName := os.Getenv("NODE_NAME")
+	if nodeName == "" {
+		setupLog.Error(errors.New("NODE_NAME environment variable not set"), "unable to configure node-scoped cache")
+		os.Exit(1)
+	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:  scheme,
 		Metrics: server.Options{BindAddress: metricsAddr},
+		Cache: cache.Options{
+			ByObject: map[client.Object]cache.ByObject{
+				&corev1.Pod{}: {
+					Field: fields.OneTermEqualSelector("spec.nodeName", nodeName),
+					// Transform each cached pod down to only the fields the PowerPod
+					// path reads; this also drops managedFields.
+					Transform: transform.TransformPodForCache,
+				},
+				&corev1.Node{}: {
+					Field:     fields.OneTermEqualSelector("metadata.name", nodeName),
+					Transform: cache.TransformStripManagedFields(),
+				},
+				&powerv1alpha1.PowerNodeState{}: {
+					Namespaces: map[string]cache.Config{
+						controllers.PowerNamespace: {},
+					},
+					Field: fields.OneTermEqualSelector("metadata.name", nodeName+"-power-state"),
+				},
+			},
+		},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

@@ -23,6 +23,7 @@ import (
 
 	"go.uber.org/zap/zapcore"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -38,6 +39,7 @@ import (
 
 	"github.com/cluster-power-manager/cluster-power-manager/controllers"
 	"github.com/cluster-power-manager/cluster-power-manager/pkg/state"
+	"github.com/cluster-power-manager/cluster-power-manager/pkg/transform"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -89,6 +91,16 @@ func main() {
 		LeaseDuration:    &leaseDuration,
 		Cache: cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
+				// The PowerProfile delete webhook indexes every Pod by requested
+				// profile. It shares the node-agent pod transform; agent-specific fields
+				// are retained for now and can be trimmed if memory requires it.
+				&corev1.Pod{}: {
+					Transform: transform.TransformPodForCache,
+				},
+				// Node readers need labels and CPU capacity, but not managedFields.
+				&corev1.Node{}: {
+					Transform: cache.TransformStripManagedFields(),
+				},
 				// Scope DaemonSet informer to the operator namespace.
 				&appsv1.DaemonSet{}: {
 					Namespaces: map[string]cache.Config{

@@ -213,8 +213,14 @@ build-push-images-ocp: images-ocp
 run: generate fmt vet manifests
 	go run ./build/manager/main.go
 
+# The agent scopes its caches to a single node, so it needs the name of a node in the cluster.
+ifeq ($(NODE_NAME),)
+run-agent:
+	$(error run-agent requires NODE_NAME=<name of a cluster node>)
+else
 run-agent: generate fmt vet manifests
 	go run ./build/nodeagent/main.go
+endif
 
 .PHONY: helm-install helm-uninstall 
 helm-install:

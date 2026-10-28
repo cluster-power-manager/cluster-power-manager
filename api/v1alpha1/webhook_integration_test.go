@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cluster-power-manager/cluster-power-manager/pkg/transform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -32,6 +33,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -88,6 +90,13 @@ func TestMain(m *testing.M) {
 			CertDir: envtestEnv.WebhookInstallOptions.LocalServingCertDir,
 		}),
 		Metrics: metricsserver.Options{BindAddress: "0"},
+		Cache: cache.Options{
+			ByObject: map[client.Object]cache.ByObject{
+				// Mirror the manager's Pod transform so the webhook validates
+				// against the same cached data it sees in production.
+				&corev1.Pod{}: {Transform: transform.TransformPodForCache},
+			},
+		},
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to create manager: %v\n", err)
@@ -424,16 +433,26 @@ func TestEnvTestWebhook_PowerProfile(t *testing.T) {
 	})
 
 	// Create two pods that reference the profile, then verify both PNC and pod reasons appear.
-	podA := testPod("pp-test-pod-a", defaultCPMNamespace, corev1.ResourceList{
+	podA := rawTestPod("pp-test-pod-a", defaultCPMNamespace, corev1.ResourceList{
 		corev1.ResourceName(extendedResourcePrefix + "pp-shared"): resource.MustParse("1"),
 	})
-	podB := testPod("pp-test-pod-b", defaultCPMNamespace, corev1.ResourceList{
+	podB := rawTestPod("pp-test-pod-b", defaultCPMNamespace, corev1.ResourceList{
 		corev1.ResourceName(extendedResourcePrefix + "pp-shared"): resource.MustParse("2"),
 	})
 	require.NoError(t, envtestClient.Create(ctx, podA))
 	t.Cleanup(func() { require.NoError(t, envtestClient.Delete(ctx, podA)) })
 	require.NoError(t, envtestClient.Create(ctx, podB))
 	t.Cleanup(func() { require.NoError(t, envtestClient.Delete(ctx, podB)) })
+
+	// The webhook reads Pods through the manager cache, so it validates the
+	// transformed shape: create-only fields such as the container image are gone.
+	require.Eventually(t, func() bool {
+		cached := &corev1.Pod{}
+		if err := envtestClient.Get(ctx, client.ObjectKeyFromObject(podA), cached); err != nil {
+			return false
+		}
+		return len(cached.Spec.Containers) == 1 && cached.Spec.Containers[0].Image == ""
+	}, 5*time.Second, 50*time.Millisecond, "cached Pod should be transformed by the Pod cache transform")
 
 	t.Run("delete/reject referenced by both PowerNodeConfig and Pods", func(t *testing.T) {
 		err := envtestClient.Delete(ctx, profile)
