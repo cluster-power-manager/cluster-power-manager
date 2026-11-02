@@ -18,6 +18,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 
 	powerv1alpha1 "github.com/cluster-power-manager/cluster-power-manager/api/v1alpha1"
@@ -221,7 +222,7 @@ func TestEnvTest_UncoreReconcile_SingleCR(t *testing.T) {
 	require.NoError(t, err)
 	defer teardown()
 
-	r := &UncoreReconciler{Client: cl, Log: testLogger(), PowerLibrary: host}
+	r := &UncoreReconciler{Client: cl, Log: testLogger(), PowerLibrary: host, NodeName: os.Getenv(NodeNameEnv)}
 
 	// Setup: node, PowerNodeState with NodeInfo, Uncore CR.
 	createTestNode(t, cl, nodeName, map[string]string{"feature.node.kubernetes.io/uncore": "true"})
@@ -265,7 +266,7 @@ func TestEnvTest_UncoreReconcile_ConflictResolution(t *testing.T) {
 	require.NoError(t, err)
 	defer teardown()
 
-	r := &UncoreReconciler{Client: cl, Log: testLogger(), PowerLibrary: host}
+	r := &UncoreReconciler{Client: cl, Log: testLogger(), PowerLibrary: host, NodeName: os.Getenv(NodeNameEnv)}
 
 	createTestNode(t, cl, nodeName, map[string]string{"zone": "us-east"})
 	defer deleteEnvTestNode(t, cl, nodeName)
@@ -312,7 +313,7 @@ func TestEnvTest_UncoreReconcile_Deletion(t *testing.T) {
 	require.NoError(t, err)
 	defer teardown()
 
-	r := &UncoreReconciler{Client: cl, Log: testLogger(), PowerLibrary: host}
+	r := &UncoreReconciler{Client: cl, Log: testLogger(), PowerLibrary: host, NodeName: os.Getenv(NodeNameEnv)}
 
 	createTestNode(t, cl, nodeName, map[string]string{"feature.node.kubernetes.io/uncore": "true"})
 	defer deleteEnvTestNode(t, cl, nodeName)
@@ -358,7 +359,7 @@ func TestEnvTest_UncoreReconcile_NonMatchingThenMatch(t *testing.T) {
 	require.NoError(t, err)
 	defer teardown()
 
-	r := &UncoreReconciler{Client: cl, Log: testLogger(), PowerLibrary: host}
+	r := &UncoreReconciler{Client: cl, Log: testLogger(), PowerLibrary: host, NodeName: os.Getenv(NodeNameEnv)}
 
 	// Node does NOT have the label the Uncore CR selects.
 	createTestNode(t, cl, nodeName, map[string]string{"zone": "us-west"})
@@ -410,7 +411,7 @@ func TestEnvTest_UncoreReconcile_LabelChangeRemovesMatch(t *testing.T) {
 	require.NoError(t, err)
 	defer teardown()
 
-	r := &UncoreReconciler{Client: cl, Log: testLogger(), PowerLibrary: host}
+	r := &UncoreReconciler{Client: cl, Log: testLogger(), PowerLibrary: host, NodeName: os.Getenv(NodeNameEnv)}
 
 	// Node has matching label.
 	createTestNode(t, cl, nodeName, map[string]string{"zone": "us-east"})
@@ -464,7 +465,7 @@ func TestEnvTest_UncoreReconcile_DieTuning(t *testing.T) {
 	require.NoError(t, err)
 	defer teardown()
 
-	r := &UncoreReconciler{Client: cl, Log: testLogger(), PowerLibrary: host}
+	r := &UncoreReconciler{Client: cl, Log: testLogger(), PowerLibrary: host, NodeName: os.Getenv(NodeNameEnv)}
 
 	createTestNode(t, cl, nodeName, nil)
 	defer deleteEnvTestNode(t, cl, nodeName)
@@ -508,7 +509,7 @@ func TestEnvTest_UncoreReconcile_PackageTuning(t *testing.T) {
 	require.NoError(t, err)
 	defer teardown()
 
-	r := &UncoreReconciler{Client: cl, Log: testLogger(), PowerLibrary: host}
+	r := &UncoreReconciler{Client: cl, Log: testLogger(), PowerLibrary: host, NodeName: os.Getenv(NodeNameEnv)}
 
 	createTestNode(t, cl, nodeName, nil)
 	defer deleteEnvTestNode(t, cl, nodeName)
@@ -551,7 +552,7 @@ func TestEnvTest_UncoreReconcile_EmptySelectorMatchesAll(t *testing.T) {
 	require.NoError(t, err)
 	defer teardown()
 
-	r := &UncoreReconciler{Client: cl, Log: testLogger(), PowerLibrary: host}
+	r := &UncoreReconciler{Client: cl, Log: testLogger(), PowerLibrary: host, NodeName: os.Getenv(NodeNameEnv)}
 
 	createTestNode(t, cl, nodeName, map[string]string{"role": "worker"})
 	defer deleteEnvTestNode(t, cl, nodeName)
@@ -588,7 +589,7 @@ func TestEnvTest_UncoreReconcile_StickyActiveConfig(t *testing.T) {
 	require.NoError(t, err)
 	defer teardown()
 
-	r := &UncoreReconciler{Client: cl, Log: testLogger(), PowerLibrary: host}
+	r := &UncoreReconciler{Client: cl, Log: testLogger(), PowerLibrary: host, NodeName: os.Getenv(NodeNameEnv)}
 
 	createTestNode(t, cl, nodeName, nil)
 	defer deleteEnvTestNode(t, cl, nodeName)
@@ -639,7 +640,7 @@ func TestEnvTest_UncoreReconcile_UpdateActiveConfig(t *testing.T) {
 	require.NoError(t, err)
 	defer teardown()
 
-	r := &UncoreReconciler{Client: cl, Log: testLogger(), PowerLibrary: host}
+	r := &UncoreReconciler{Client: cl, Log: testLogger(), PowerLibrary: host, NodeName: os.Getenv(NodeNameEnv)}
 
 	createTestNode(t, cl, nodeName, nil)
 	defer deleteEnvTestNode(t, cl, nodeName)

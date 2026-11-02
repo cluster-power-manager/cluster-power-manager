@@ -18,6 +18,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 
 	powerv1alpha1 "github.com/cluster-power-manager/cluster-power-manager/api/v1alpha1"
@@ -42,6 +43,7 @@ func createNodeConfigReconcilerWithEnvTest(t *testing.T, cl client.Client, mockH
 		Log:          ctrl.Log.WithName("testing"),
 		Scheme:       s,
 		PowerLibrary: mockHost,
+		NodeName:     os.Getenv(NodeNameEnv),
 	}
 }
 

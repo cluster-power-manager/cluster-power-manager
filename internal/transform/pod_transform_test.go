@@ -48,13 +48,13 @@ func largePod() *corev1.Pod {
 			UID:               "uid-123",
 			ResourceVersion:   "4242",
 			DeletionTimestamp: &now,
+			Finalizers:        []string{"example.com/finalizer"},
 			// Dropped fields:
 			Labels:      map[string]string{"app": "foo"},
 			Annotations: map[string]string{"kubectl.kubernetes.io/last-applied-configuration": "huge-blob"},
 			ManagedFields: []metav1.ManagedFieldsEntry{
 				{Manager: "kubelet", Operation: metav1.ManagedFieldsOperationUpdate},
 			},
-			Finalizers: []string{"example.com/finalizer"},
 		},
 		Spec: corev1.PodSpec{
 			NodeName:           "node-a",
@@ -89,11 +89,8 @@ func largePod() *corev1.Pod {
 	}
 }
 
-func TestTransformPodForCache(t *testing.T) {
-	out, err := TransformPodForCache(largePod())
-	require.NoError(t, err)
-	transformed, ok := out.(*corev1.Pod)
-	require.True(t, ok)
+func TestTransformPodForAgent(t *testing.T) {
+	transformed := TransformPodForAgent(largePod())
 
 	// --- Preserved metadata ---
 	assert.Equal(t, "my-pod", transformed.Name)
@@ -101,12 +98,12 @@ func TestTransformPodForCache(t *testing.T) {
 	assert.Equal(t, "uid-123", string(transformed.UID))
 	assert.Equal(t, "4242", transformed.ResourceVersion)
 	assert.NotNil(t, transformed.DeletionTimestamp)
+	assert.Equal(t, []string{"example.com/finalizer"}, transformed.Finalizers)
 
 	// --- Dropped metadata ---
 	assert.Nil(t, transformed.Labels)
 	assert.Nil(t, transformed.Annotations)
 	assert.Nil(t, transformed.ManagedFields)
-	assert.Nil(t, transformed.Finalizers)
 
 	// --- Preserved spec ---
 	assert.Equal(t, "node-a", transformed.Spec.NodeName)
@@ -140,30 +137,109 @@ func TestTransformPodForCache(t *testing.T) {
 	assert.Empty(t, transformed.Status.ContainerStatuses[0].Image)
 }
 
-func TestTransformPodForCache_PreservesPowerPredicateAndID(t *testing.T) {
-	out, err := TransformPodForCache(largePod())
-	require.NoError(t, err)
-	transformed := out.(*corev1.Pod)
+func TestTransformPodForManager(t *testing.T) {
+	transformed := TransformPodForManager(largePod())
+
+	// --- Preserved metadata ---
+	assert.Equal(t, "my-pod", transformed.Name)
+	assert.Equal(t, "my-ns", transformed.Namespace)
+	assert.Equal(t, "4242", transformed.ResourceVersion)
+	assert.NotNil(t, transformed.DeletionTimestamp)
+	assert.Equal(t, []string{"example.com/finalizer"}, transformed.Finalizers)
+
+	// --- Dropped metadata ---
+	assert.Empty(t, transformed.UID)
+	assert.Nil(t, transformed.Labels)
+	assert.Nil(t, transformed.Annotations)
+	assert.Nil(t, transformed.ManagedFields)
+
+	// --- Preserved spec ---
+	require.Len(t, transformed.Spec.Containers, 1)
+	require.Len(t, transformed.Spec.InitContainers, 1)
+	assert.Equal(t, largePod().Spec.Containers[0].Resources, transformed.Spec.Containers[0].Resources)
+	assert.Equal(t, largePod().Spec.InitContainers[0].Resources, transformed.Spec.InitContainers[0].Resources)
+	_, hasPowerRequest := transformed.Spec.Containers[0].Resources.Requests[corev1.ResourceName(controllers.ResourcePrefix+"performance")]
+	assert.True(t, hasPowerRequest, "manager transform should retain power requests for the profile index")
+
+	// --- Dropped agent-only fields ---
+	assert.Empty(t, transformed.Spec.NodeName)
+	assert.Empty(t, transformed.Spec.Containers[0].Name)
+	assert.Empty(t, transformed.Spec.InitContainers[0].Name)
+	assert.Empty(t, transformed.Spec.ServiceAccountName)
+	assert.Nil(t, transformed.Spec.Tolerations)
+	assert.Empty(t, transformed.Spec.Containers[0].Image)
+	assert.Nil(t, transformed.Spec.Containers[0].Env)
+	assert.Nil(t, transformed.Spec.Containers[0].VolumeMounts)
+
+	// --- Preserved status ---
+	assert.Equal(t, corev1.PodRunning, transformed.Status.Phase)
+
+	// --- Dropped agent-only status ---
+	assert.Empty(t, transformed.Status.QOSClass)
+	assert.Nil(t, transformed.Status.ContainerStatuses)
+	assert.Nil(t, transformed.Status.InitContainerStatuses)
+	assert.Empty(t, transformed.Status.PodIP)
+}
+
+func TestTransformPodForAgent_PreservesPowerPredicateAndID(t *testing.T) {
+	transformed := TransformPodForAgent(largePod())
 
 	// The transformed pod must still satisfy the readers that decide power-relevance.
-	t.Setenv("NODE_NAME", "node-a")
-	assert.True(t, controllers.PowerReleventPodPredicate(transformed), "transformed power pod should still match predicate")
+	assert.True(t, controllers.PowerReleventPodPredicate("node-a", transformed), "transformed power pod should still match predicate")
 	_, hasPowerRequest := transformed.Spec.Containers[0].Resources.Requests[corev1.ResourceName(controllers.ResourcePrefix+"performance")]
 	assert.True(t, hasPowerRequest, "transformed container should retain its power request")
 	assert.Equal(t, "containerd://main", transformed.Status.ContainerStatuses[0].ContainerID)
 }
 
-func TestTransformPodForCache_Idempotent(t *testing.T) {
-	once, err := TransformPodForCache(largePod())
-	require.NoError(t, err)
-	twice, err := TransformPodForCache(once)
-	require.NoError(t, err)
+func TestTransformPodForAgent_Idempotent(t *testing.T) {
+	once := TransformPodForAgent(largePod())
+	twice := TransformPodForAgent(once)
 	assert.Equal(t, once, twice, "transforming an already-transformed pod must be a no-op")
 }
 
-func TestTransformPodForCache_NonPodPassthrough(t *testing.T) {
+func TestTransformPodForAgent_EmptySlicesAreNilAndIdempotent(t *testing.T) {
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Name: "empty-pod", Namespace: "my-ns"},
+		Spec: corev1.PodSpec{
+			Containers:     []corev1.Container{},
+			InitContainers: []corev1.Container{},
+		},
+		Status: corev1.PodStatus{
+			ContainerStatuses:     []corev1.ContainerStatus{},
+			InitContainerStatuses: []corev1.ContainerStatus{},
+		},
+	}
+
+	transforms := map[string]func(*corev1.Pod) *corev1.Pod{
+		"agent":   TransformPodForAgent,
+		"manager": TransformPodForManager,
+	}
+	for name, transformPod := range transforms {
+		t.Run(name, func(t *testing.T) {
+			once := transformPod(pod)
+			assert.Nil(t, once.Spec.Containers)
+			assert.Nil(t, once.Spec.InitContainers)
+			assert.Nil(t, once.Status.ContainerStatuses)
+			assert.Nil(t, once.Status.InitContainerStatuses)
+
+			twice := transformPod(once)
+			assert.Equal(t, once, twice, "empty slices must stay stable across transforms")
+		})
+	}
+}
+
+func TestTransformFuncs_NonPodPassthrough(t *testing.T) {
 	in := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-a"}}
-	out, err := TransformPodForCache(in)
-	require.NoError(t, err)
-	assert.Same(t, in, out, "a non-pod object must be returned unchanged")
+
+	transforms := map[string]func(interface{}) (interface{}, error){
+		"agent":   TransformPodForAgentCache,
+		"manager": TransformPodForManagerCache,
+	}
+	for name, transformFunc := range transforms {
+		t.Run(name, func(t *testing.T) {
+			out, err := transformFunc(in)
+			require.NoError(t, err)
+			assert.Same(t, in, out, "a non-pod object must be returned unchanged")
+		})
+	}
 }

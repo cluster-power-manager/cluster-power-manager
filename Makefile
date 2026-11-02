@@ -214,13 +214,12 @@ run: generate fmt vet manifests
 	go run ./build/manager/main.go
 
 # The agent scopes its caches to a single node, so it needs the name of a node in the cluster.
-ifeq ($(NODE_NAME),)
-run-agent:
-	$(error run-agent requires NODE_NAME=<name of a cluster node>)
-else
-run-agent: generate fmt vet manifests
-	go run ./build/nodeagent/main.go
-endif
+run-agent: .check-node-name generate fmt vet manifests
+	NODE_NAME="$(NODE_NAME)" go run ./build/nodeagent/main.go
+
+.PHONY: .check-node-name
+.check-node-name:
+	@test -n "$(NODE_NAME)" || { echo "run-agent requires NODE_NAME=<name of a cluster node>" >&2; exit 1; }
 
 .PHONY: helm-install helm-uninstall 
 helm-install:

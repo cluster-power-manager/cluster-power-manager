@@ -2,7 +2,6 @@ package scaling
 
 import (
 	"context"
-	"os"
 	"sync"
 
 	"github.com/go-logr/logr"
@@ -30,9 +29,7 @@ type cpuScalingManagerImpl struct {
 	logger       logr.Logger
 }
 
-func NewCPUScalingManager(powerLib *power.Host, dpdkClient DPDKTelemetryClient) CPUScalingManager {
-	nodeName := os.Getenv("NODE_NAME")
-
+func NewCPUScalingManager(powerLib *power.Host, dpdkClient DPDKTelemetryClient, nodeName string) CPUScalingManager {
 	mgr := &cpuScalingManagerImpl{
 		powerLibrary: powerLib,
 		dpdkClient:   dpdkClient,

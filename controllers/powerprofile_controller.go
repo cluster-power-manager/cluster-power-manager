@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	powerv1alpha1 "github.com/cluster-power-manager/cluster-power-manager/api/v1alpha1"
@@ -53,6 +52,7 @@ type PowerProfileReconciler struct {
 	Log          logr.Logger
 	Scheme       *runtime.Scheme
 	PowerLibrary power.Host
+	NodeName     string
 }
 
 // +kubebuilder:rbac:groups=power.cluster-power-manager.github.io,resources=powerprofiles,verbs=get;list;watch,roleName=node-agent-role
@@ -77,7 +77,7 @@ func (r *PowerProfileReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// Node name is passed down via the downwards API and used to make sure the PowerProfile is for this node
-	nodeName := os.Getenv("NODE_NAME")
+	nodeName := r.NodeName
 	profile := &powerv1alpha1.PowerProfile{}
 
 	// Defer the function to update the PowerNodeState with any errors.
@@ -389,7 +389,7 @@ func (r *PowerProfileReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			builder.WithPredicates(predicate.Funcs{
 				UpdateFunc: func(e event.UpdateEvent) bool {
 					// Filter out the nodes that are not the current node.
-					if e.ObjectOld.GetName() != os.Getenv("NODE_NAME") {
+					if e.ObjectOld.GetName() != r.NodeName {
 						return false
 					}
 					// Filter for label updates only.
@@ -399,7 +399,7 @@ func (r *PowerProfileReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				GenericFunc: func(ge event.GenericEvent) bool { return false },
 				DeleteFunc: func(de event.DeleteEvent) bool {
 					// Filter the current node.
-					return de.Object.GetName() == os.Getenv("NODE_NAME")
+					return de.Object.GetName() == r.NodeName
 				},
 			})).
 		Complete(r)

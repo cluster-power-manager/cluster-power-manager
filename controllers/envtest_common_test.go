@@ -23,10 +23,13 @@ import (
 	"testing"
 
 	powerv1alpha1 "github.com/cluster-power-manager/cluster-power-manager/api/v1alpha1"
+	"github.com/cluster-power-manager/cluster-power-manager/internal/transform"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 )
@@ -34,36 +37,6 @@ import (
 // envTestClient is a shared client connected to the suite-level envtest API server.
 // Initialized in TestMain, available to all envtest tests.
 var envTestClient client.Client
-
-// transformClient applies the shared Pod cache transform to Pod reads, so
-// reconcilers under test see the same object shape they see in production
-// while writes still use complete objects for the envtest API server.
-type transformClient struct {
-	client.Client
-}
-
-func (c transformClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-	if err := c.Client.Get(ctx, key, obj, opts...); err != nil {
-		return err
-	}
-	return transformPodForCache(obj)
-}
-
-func (c transformClient) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-	if err := c.Client.List(ctx, list, opts...); err != nil {
-		return err
-	}
-	podList, ok := list.(*corev1.PodList)
-	if !ok {
-		return nil
-	}
-	for i := range podList.Items {
-		if err := transformPodForCache(&podList.Items[i]); err != nil {
-			return err
-		}
-	}
-	return nil
-}
 
 // TestMain starts a single envtest API server for the entire envtest suite,
 // runs all tests, then tears it down. This avoids the cost of starting/stopping
@@ -107,10 +80,7 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-// setupEnvTest starts a standalone envtest API server and returns a client and
-// cleanup function. Use this only when a test needs a fully isolated environment.
-// Most tests should use envTestClient instead.
-func setupEnvTest(t *testing.T) (client.Client, func()) {
+func startEnvTest(t *testing.T) (*rest.Config, func()) {
 	t.Helper()
 
 	testEnv := &envtest.Environment{
@@ -126,6 +96,17 @@ func setupEnvTest(t *testing.T) (client.Client, func()) {
 	err = powerv1alpha1.AddToScheme(scheme.Scheme)
 	require.NoError(t, err)
 
+	return cfg, func() {
+		err := testEnv.Stop()
+		if err != nil {
+			t.Logf("failed to stop envtest: %v", err)
+		}
+	}
+}
+
+func newEnvTestClient(t *testing.T, cfg *rest.Config) client.Client {
+	t.Helper()
+
 	cl, err := client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	require.NoError(t, err)
 
@@ -133,11 +114,63 @@ func setupEnvTest(t *testing.T) (client.Client, func()) {
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: PowerNamespace}}
 	_ = cl.Create(context.TODO(), ns)
 
-	return cl, func() {
-		err := testEnv.Stop()
-		if err != nil {
-			t.Logf("failed to stop envtest: %v", err)
+	return cl
+}
+
+// setupEnvTest starts a standalone envtest API server and returns a client and
+// cleanup function. Use this only when a test needs a fully isolated environment.
+// Most tests should use envTestClient instead.
+func setupEnvTest(t *testing.T) (client.Client, func()) {
+	t.Helper()
+
+	cfg, stop := startEnvTest(t)
+	return newEnvTestClient(t, cfg), stop
+}
+
+// setupEnvTestWithPodCache starts an isolated envtest API server and returns a
+// direct client for setup and assertions plus a client that reads Pods through a
+// cache configured with the node-agent transform. This mirrors the reconciler's
+// production view without a hand-written client wrapper.
+func setupEnvTestWithPodCache(t *testing.T) (client.Client, client.Client, func()) {
+	t.Helper()
+
+	cfg, stop := startEnvTest(t)
+	direct := newEnvTestClient(t, cfg)
+
+	podCache, err := cache.New(cfg, cache.Options{
+		Scheme: scheme.Scheme,
+		ByObject: map[client.Object]cache.ByObject{
+			&corev1.Pod{}: {Transform: transform.TransformPodForAgentCache},
+		},
+	})
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	if _, err := podCache.GetInformer(ctx, &corev1.Pod{}); err != nil {
+		cancel()
+		stop()
+		require.NoError(t, err)
+	}
+
+	stopped := make(chan struct{})
+	go func() {
+		defer close(stopped)
+		if err := podCache.Start(ctx); err != nil && ctx.Err() == nil {
+			t.Logf("envtest pod cache stopped: %v", err)
 		}
+	}()
+	require.True(t, podCache.WaitForCacheSync(ctx), "failed to sync envtest pod cache")
+
+	cached, err := client.New(cfg, client.Options{
+		Scheme: scheme.Scheme,
+		Cache:  &client.CacheOptions{Reader: podCache},
+	})
+	require.NoError(t, err)
+
+	return direct, cached, func() {
+		cancel()
+		<-stopped
+		stop()
 	}
 }
 

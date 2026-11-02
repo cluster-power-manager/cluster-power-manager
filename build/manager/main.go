@@ -38,8 +38,8 @@ import (
 	powerv1alpha1 "github.com/cluster-power-manager/cluster-power-manager/api/v1alpha1"
 
 	"github.com/cluster-power-manager/cluster-power-manager/controllers"
+	"github.com/cluster-power-manager/cluster-power-manager/internal/transform"
 	"github.com/cluster-power-manager/cluster-power-manager/pkg/state"
-	"github.com/cluster-power-manager/cluster-power-manager/pkg/transform"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -92,10 +92,9 @@ func main() {
 		Cache: cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
 				// The PowerProfile delete webhook indexes every Pod by requested
-				// profile. It shares the node-agent pod transform; agent-specific fields
-				// are retained for now and can be trimmed if memory requires it.
+				// profile, so it only needs the manager-specific pod fields.
 				&corev1.Pod{}: {
-					Transform: transform.TransformPodForCache,
+					Transform: transform.TransformPodForManagerCache,
 				},
 				// Node readers need labels and CPU capacity, but not managedFields.
 				&corev1.Node{}: {

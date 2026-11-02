@@ -190,7 +190,7 @@ func (r *PowerConfigReconciler) Reconcile(c context.Context, req ctrl.Request) (
 
 		// Create PowerNodeState for this node if it doesn't exist
 		powerNodeState := &powerv1alpha1.PowerNodeState{}
-		powerNodeStateName := fmt.Sprintf("%s-power-state", node.Name)
+		powerNodeStateName := PowerNodeStateName(node.Name)
 		err = r.Client.Get(c, client.ObjectKey{
 			Namespace: PowerNamespace,
 			Name:      powerNodeStateName,

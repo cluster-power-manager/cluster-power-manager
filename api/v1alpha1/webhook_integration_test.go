@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cluster-power-manager/cluster-power-manager/pkg/transform"
+	"github.com/cluster-power-manager/cluster-power-manager/internal/transform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -94,7 +94,7 @@ func TestMain(m *testing.M) {
 			ByObject: map[client.Object]cache.ByObject{
 				// Mirror the manager's Pod transform so the webhook validates
 				// against the same cached data it sees in production.
-				&corev1.Pod{}: {Transform: transform.TransformPodForCache},
+				&corev1.Pod{}: {Transform: transform.TransformPodForManagerCache},
 			},
 		},
 	})

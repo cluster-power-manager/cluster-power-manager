@@ -18,7 +18,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/cluster-power-manager/cluster-power-manager/pkg/transform"
+	"github.com/cluster-power-manager/cluster-power-manager/internal/transform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -27,9 +27,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// rawTestPod builds a complete Pod, as the API server stores it. Use it when
-// the Pod is created against a real API server (envtest): the shared cache
-// transform drops required fields such as container images.
+// rawTestPod builds a complete Pod, as the API server stores it. Callers that
+// exercise the cached read path pass it through transform.TransformPodForManager;
+// envtest callers use it directly for Create because the transform drops
+// required fields such as container images.
 func rawTestPod(name, namespace string, resources corev1.ResourceList) *corev1.Pod {
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
@@ -46,16 +47,6 @@ func rawTestPod(name, namespace string, resources corev1.ResourceList) *corev1.P
 			},
 		},
 	}
-}
-
-// testPod returns the Pod as the informer cache holds it: the manager and node-agent
-// cache transformed Pods, so the webhook never observes the dropped fields.
-func testPod(name, namespace string, resources corev1.ResourceList) *corev1.Pod {
-	transformed, err := transform.TransformPodForCache(rawTestPod(name, namespace, resources))
-	if err != nil {
-		panic(err)
-	}
-	return transformed.(*corev1.Pod)
 }
 
 func TestPowerProfileValidatePowerNodeConfigReferences(t *testing.T) {
@@ -153,7 +144,7 @@ func TestPowerProfileValidatePodReferences(t *testing.T) {
 	tests := []struct {
 		name    string
 		profile *PowerProfile
-		objs    []client.Object
+		pods    []*corev1.Pod
 		wantRef bool
 		refMsg  string
 	}{
@@ -164,8 +155,8 @@ func TestPowerProfileValidatePodReferences(t *testing.T) {
 		{
 			name:    "pod requests extended resource - reject",
 			profile: testPowerProfile("performance", false),
-			objs: []client.Object{
-				testPod("my-pod", testNamespace, corev1.ResourceList{
+			pods: []*corev1.Pod{
+				rawTestPod("my-pod", testNamespace, corev1.ResourceList{
 					corev1.ResourceCPU: *resource.NewQuantity(2, resource.DecimalSI),
 					corev1.ResourceName(extendedResourcePrefix + "performance"): *resource.NewQuantity(2, resource.DecimalSI),
 				}),
@@ -176,8 +167,8 @@ func TestPowerProfileValidatePodReferences(t *testing.T) {
 		{
 			name:    "pod requests different profile - allow delete",
 			profile: testPowerProfile("performance", false),
-			objs: []client.Object{
-				testPod("my-pod", testNamespace, corev1.ResourceList{
+			pods: []*corev1.Pod{
+				rawTestPod("my-pod", testNamespace, corev1.ResourceList{
 					corev1.ResourceCPU: *resource.NewQuantity(2, resource.DecimalSI),
 					corev1.ResourceName(extendedResourcePrefix + "power-saving"): *resource.NewQuantity(2, resource.DecimalSI),
 				}),
@@ -186,9 +177,9 @@ func TestPowerProfileValidatePodReferences(t *testing.T) {
 		{
 			name:    "completed pod requests profile - allow delete",
 			profile: testPowerProfile("performance", false),
-			objs: []client.Object{
-				func() client.Object {
-					p := testPod("done-pod", testNamespace, corev1.ResourceList{
+			pods: []*corev1.Pod{
+				func() *corev1.Pod {
+					p := rawTestPod("done-pod", testNamespace, corev1.ResourceList{
 						corev1.ResourceName(extendedResourcePrefix + "performance"): *resource.NewQuantity(2, resource.DecimalSI),
 					})
 					p.Status.Phase = corev1.PodSucceeded
@@ -199,9 +190,9 @@ func TestPowerProfileValidatePodReferences(t *testing.T) {
 		{
 			name:    "failed pod requests profile - allow delete",
 			profile: testPowerProfile("performance", false),
-			objs: []client.Object{
-				func() client.Object {
-					p := testPod("failed-pod", testNamespace, corev1.ResourceList{
+			pods: []*corev1.Pod{
+				func() *corev1.Pod {
+					p := rawTestPod("failed-pod", testNamespace, corev1.ResourceList{
 						corev1.ResourceName(extendedResourcePrefix + "performance"): *resource.NewQuantity(2, resource.DecimalSI),
 					})
 					p.Status.Phase = corev1.PodFailed
@@ -212,11 +203,11 @@ func TestPowerProfileValidatePodReferences(t *testing.T) {
 		{
 			name:    "multiple pods reference profile",
 			profile: testPowerProfile("performance", false),
-			objs: []client.Object{
-				testPod("pod-a", testNamespace, corev1.ResourceList{
+			pods: []*corev1.Pod{
+				rawTestPod("pod-a", testNamespace, corev1.ResourceList{
 					corev1.ResourceName(extendedResourcePrefix + "performance"): *resource.NewQuantity(2, resource.DecimalSI),
 				}),
-				testPod("pod-b", "other-ns", corev1.ResourceList{
+				rawTestPod("pod-b", "other-ns", corev1.ResourceList{
 					corev1.ResourceName(extendedResourcePrefix + "performance"): *resource.NewQuantity(1, resource.DecimalSI),
 				}),
 			},
@@ -227,7 +218,12 @@ func TestPowerProfileValidatePodReferences(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			v := &powerProfileValidator{Client: newFakeClient(tc.objs...), Namespace: testNamespace}
+			cachedPods := make([]client.Object, len(tc.pods))
+			for i, pod := range tc.pods {
+				cachedPods[i] = transform.TransformPodForManager(pod)
+			}
+
+			v := &powerProfileValidator{Client: newFakeClient(cachedPods...), Namespace: testNamespace}
 			err := v.validatePodReferences(context.TODO(), tc.profile)
 			if tc.wantRef {
 				require.Error(t, err)

@@ -19,7 +19,6 @@ import (
 	"context"
 	"fmt"
 	"maps"
-	"os"
 	"strings"
 
 	powerv1alpha1 "github.com/cluster-power-manager/cluster-power-manager/api/v1alpha1"
@@ -49,6 +48,7 @@ type UncoreReconciler struct {
 	Log          logr.Logger
 	Scheme       *runtime.Scheme
 	PowerLibrary power.Host
+	NodeName     string
 }
 
 //+kubebuilder:rbac:groups=power.cluster-power-manager.github.io,resources=uncores,verbs=get;list;watch,roleName=node-agent-role
@@ -67,9 +67,9 @@ func (r *UncoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, nil
 	}
 
-	nodeName := os.Getenv("NODE_NAME")
+	nodeName := r.NodeName
 	if nodeName == "" {
-		return ctrl.Result{}, fmt.Errorf("NODE_NAME environment variable not set")
+		return ctrl.Result{}, ErrNodeNameNotSet
 	}
 
 	if r.PowerLibrary.Topology() == nil {
@@ -294,7 +294,7 @@ func (r *UncoreReconciler) updateUncoreInPowerNodeState(
 	statusErrors []string,
 	logger *logr.Logger,
 ) error {
-	powerNodeStateName := fmt.Sprintf("%s-power-state", nodeName)
+	powerNodeStateName := PowerNodeStateName(nodeName)
 
 	patchNodeState := &powerv1alpha1.PowerNodeState{
 		TypeMeta: metav1.TypeMeta{
@@ -330,7 +330,7 @@ func (r *UncoreReconciler) updateUncoreInPowerNodeState(
 // Setting Uncore to nil causes it to be omitted from the JSON patch (omitempty),
 // which makes SSA prune the field from this manager's ownership.
 func (r *UncoreReconciler) removeUncoreFromPowerNodeState(ctx context.Context, nodeName string, logger *logr.Logger) error {
-	powerNodeStateName := fmt.Sprintf("%s-power-state", nodeName)
+	powerNodeStateName := PowerNodeStateName(nodeName)
 
 	patchNodeState := &powerv1alpha1.PowerNodeState{
 		TypeMeta: metav1.TypeMeta{
@@ -381,7 +381,7 @@ func (r *UncoreReconciler) enqueueUncoreReconcile(ctx context.Context, _ client.
 // SetupWithManager registers the controller and configures watches for
 // Uncore CRs and Node label changes.
 func (r *UncoreReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	nodeName := os.Getenv("NODE_NAME")
+	nodeName := r.NodeName
 	return ctrl.NewControllerManagedBy(mgr).
 		// Uncore CRUD: re-evaluate which config should be active.
 		For(&powerv1alpha1.Uncore{},

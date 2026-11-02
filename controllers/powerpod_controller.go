@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"os"
 	"reflect"
 	"slices"
 	"strconv"
@@ -69,6 +68,7 @@ type PowerPodReconciler struct {
 	PowerLibrary        power.Host
 	DPDKTelemetryClient scaling.DPDKTelemetryClient
 	CPUScalingManager   scaling.CPUScalingManager
+	NodeName            string
 }
 
 // +kubebuilder:rbac:groups="",resources=nodes,verbs=get;list;watch,roleName=node-agent-role
@@ -96,8 +96,7 @@ func (r *PowerPodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
-	// The NODE_NAME environment variable is passed in via the downwards API in the pod spec
-	nodeName := os.Getenv("NODE_NAME")
+	nodeName := r.NodeName
 
 	if !pod.ObjectMeta.DeletionTimestamp.IsZero() || pod.Status.Phase == corev1.PodSucceeded {
 		return r.handlePodDeletion(ctx, pod, nodeName, &logger)
@@ -257,7 +256,7 @@ func (r *PowerPodReconciler) handlePodDeletion(ctx context.Context, pod *corev1.
 	_ = r.State.DeletePodFromState(pod.GetName(), pod.GetNamespace())
 
 	// Get the pod's CPU assignments from PowerNodeState to know what to clean up.
-	powerNodeStateName := fmt.Sprintf("%s-power-state", nodeName)
+	powerNodeStateName := PowerNodeStateName(nodeName)
 	currentNodeState := &powerv1alpha1.PowerNodeState{}
 
 	// Get the PowerNodeState to find this pod's CPU assignments and move them back to the shared pool.
@@ -524,12 +523,12 @@ func getCleanCoreList(coreIDs string) []uint {
 
 // PowerReleventPodPredicate returns true if this pod should be considered by the controller
 // based on node scope and presence of power profile resource requests.
-func PowerReleventPodPredicate(obj client.Object) bool {
+func PowerReleventPodPredicate(nodeName string, obj client.Object) bool {
 	pod, ok := obj.(*corev1.Pod)
 	if !ok {
 		return false
 	}
-	if pod.Spec.NodeName != os.Getenv("NODE_NAME") {
+	if pod.Spec.NodeName != nodeName {
 		return false
 	}
 	for _, c := range allPodContainers(pod) {
@@ -578,7 +577,7 @@ func (r *PowerPodReconciler) addPowerNodeStatusExclusiveEntry(
 	powerContainers []powerv1alpha1.PowerContainer,
 	logger *logr.Logger,
 ) error {
-	powerNodeStateName := fmt.Sprintf("%s-power-state", nodeName)
+	powerNodeStateName := PowerNodeStateName(nodeName)
 	fieldManager := fmt.Sprintf("powerpod-controller.%s", podUID)
 
 	entry := []powerv1alpha1.ExclusiveCPUPoolStatus{
@@ -614,7 +613,7 @@ func (r *PowerPodReconciler) removePowerNodeStatusExclusiveEntry(
 	podUID string,
 	logger *logr.Logger,
 ) error {
-	powerNodeStateName := fmt.Sprintf("%s-power-state", nodeName)
+	powerNodeStateName := PowerNodeStateName(nodeName)
 	fieldManager := fmt.Sprintf("powerpod-controller.%s", podUID)
 
 	logger.V(5).Info("removing exclusive entry from PowerNodeState via SSA", "fieldManager", fieldManager)
@@ -697,7 +696,9 @@ func (r *PowerPodReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Pod{},
 			builder.WithPredicates(
-				predicate.NewPredicateFuncs(PowerReleventPodPredicate))).
+				predicate.NewPredicateFuncs(func(obj client.Object) bool {
+					return PowerReleventPodPredicate(r.NodeName, obj)
+				}))).
 		Watches(&powerv1alpha1.PowerProfile{},
 			handler.EnqueueRequestsFromMapFunc(r.powerProfileToPodRequests),
 			builder.WithPredicates(predicate.Funcs{
@@ -724,7 +725,7 @@ func (r *PowerPodReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *PowerPodReconciler) powerProfileToPodRequests(ctx context.Context, obj client.Object) []reconcile.Request {
 	requests := []reconcile.Request{}
 
-	nodeName := os.Getenv("NODE_NAME")
+	nodeName := r.NodeName
 	if nodeName == "" {
 		return requests
 	}

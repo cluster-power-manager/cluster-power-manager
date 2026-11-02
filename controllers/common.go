@@ -17,6 +17,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	stderrors "errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -38,9 +39,19 @@ import (
 const (
 	queuetime          = time.Second * 5
 	PowerNodeStateKind = "PowerNodeState"
+	// NodeNameEnv is the environment variable that identifies the node the agent runs on.
+	NodeNameEnv = "NODE_NAME"
 	// FieldOwnerPowerProfileController is the base field manager name for PowerProfile controller.
 	FieldOwnerPowerProfileController = "powerprofile-controller"
 )
+
+// ErrNodeNameNotSet is returned when a node-scoped controller was constructed without a node name.
+var ErrNodeNameNotSet = stderrors.New("NODE_NAME environment variable not set")
+
+// PowerNodeStateName returns the name of the PowerNodeState for a node.
+func PowerNodeStateName(nodeName string) string {
+	return nodeName + "-power-state"
+}
 
 // powerProfileFieldManager returns the field manager name for a specific PowerProfile.
 // Using per-profile field managers enables SSA to track ownership at the element level
@@ -80,7 +91,7 @@ func nodeMatchesSelector(nodeLabels map[string]string, ls metav1.LabelSelector) 
 // reads from a different status field (e.g., Uncore.Name vs CPUPools.Shared.PowerNodeConfig).
 func getActiveResourceName(ctx context.Context, c client.Reader, nodeName string, extractName func(*powerv1alpha1.PowerNodeStateStatus) string) (string, error) {
 	pns := &powerv1alpha1.PowerNodeState{}
-	pnsName := fmt.Sprintf("%s-power-state", nodeName)
+	pnsName := PowerNodeStateName(nodeName)
 	if err := c.Get(ctx, client.ObjectKey{
 		Namespace: PowerNamespace,
 		Name:      pnsName,
@@ -268,7 +279,7 @@ func addPowerNodeStatusProfileEntry(ctx context.Context, c client.Client, nodeNa
 		return fmt.Errorf("nodeName cannot be empty")
 	}
 
-	powerNodeStateName := fmt.Sprintf("%s-power-state", nodeName)
+	powerNodeStateName := PowerNodeStateName(nodeName)
 
 	// Serialize the PowerProfile spec to a readable config string.
 	cstatesString := prettifyCStatesMap(profile.Spec.CStates.Names)
@@ -321,7 +332,7 @@ func removePowerNodeStatusProfileEntry(ctx context.Context, c client.Client, nod
 		return fmt.Errorf("nodeName cannot be empty")
 	}
 
-	powerNodeStateName := fmt.Sprintf("%s-power-state", nodeName)
+	powerNodeStateName := PowerNodeStateName(nodeName)
 	fieldManager := powerProfileFieldManager(profileName)
 
 	if err := applyPowerNodeStateProfilesStatus(ctx, c, powerNodeStateName, []powerv1alpha1.PowerNodeProfileStatus{}, fieldManager); err != nil {

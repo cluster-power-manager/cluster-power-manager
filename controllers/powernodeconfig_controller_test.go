@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
@@ -35,6 +36,7 @@ func createPowerNodeConfigReconciler(objs []runtime.Object, powerLib power.Host)
 		Log:          ctrl.Log.WithName("testing"),
 		Scheme:       s,
 		PowerLibrary: powerLib,
+		NodeName:     os.Getenv(NodeNameEnv),
 	}
 }
 

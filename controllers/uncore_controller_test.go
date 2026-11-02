@@ -38,6 +38,7 @@ func createUncoreReconciler(objs []runtime.Object, powerLib power.Host) *UncoreR
 		Log:          ctrl.Log.WithName("testing"),
 		Scheme:       s,
 		PowerLibrary: powerLib,
+		NodeName:     os.Getenv(NodeNameEnv),
 	}
 }
 

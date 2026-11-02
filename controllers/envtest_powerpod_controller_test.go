@@ -18,6 +18,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 
 	powerv1alpha1 "github.com/cluster-power-manager/cluster-power-manager/api/v1alpha1"
@@ -35,8 +36,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// createPodReconcilerWithEnvTest creates a PowerPodReconciler using a real envtest API server client.
-// PowerLibrary and PodResourcesClient are mocked since they depend on node-local resources.
+// createPodReconcilerWithEnvTest creates a PowerPodReconciler using the
+// cache-backed client from setupEnvTestWithPodCache, so the reconciler reads
+// transformed Pods just like it does in production. PowerLibrary and
+// PodResourcesClient are mocked since they depend on node-local resources.
 func createPodReconcilerWithEnvTest(
 	t *testing.T,
 	cl client.Client,
@@ -46,7 +49,6 @@ func createPodReconcilerWithEnvTest(
 	t.Helper()
 
 	s := scheme.Scheme
-	_ = powerv1alpha1.AddToScheme(s)
 
 	state, err := podstate.NewState()
 	require.NoError(t, err)
@@ -70,14 +72,13 @@ func createPodReconcilerWithEnvTest(
 	}
 
 	return &PowerPodReconciler{
-		// Wrap the API client so the reconciler reads transformed Pods, matching
-		// what the informer caches in production.
-		Client:             transformClient{Client: cl},
+		Client:             cl,
 		Log:                ctrl.Log.WithName("testing"),
 		Scheme:             s,
 		State:              state,
 		PodResourcesClient: *podResourcesClient,
 		PowerLibrary:       mockHost,
+		NodeName:           os.Getenv(NodeNameEnv),
 	}
 }
 
@@ -104,7 +105,7 @@ func createPodReconcilePrereqs(t *testing.T, cl client.Client, ctx context.Conte
 }
 
 func TestSSA_PodReconcile_SinglePod(t *testing.T) {
-	cl, cleanup := setupEnvTest(t)
+	cl, cachedCl, cleanup := setupEnvTestWithPodCache(t)
 	defer cleanup()
 
 	nodeName := "test-node"
@@ -156,7 +157,7 @@ func TestSSA_PodReconcile_SinglePod(t *testing.T) {
 	}
 	require.NoError(t, cl.Status().Update(ctx, pod))
 
-	r := createPodReconcilerWithEnvTest(t, cl,
+	r := createPodReconcilerWithEnvTest(t, cachedCl,
 		[]*podresourcesapi.PodResources{{
 			Name: "test-pod", Namespace: PowerNamespace,
 			Containers: []*podresourcesapi.ContainerResources{{
@@ -200,7 +201,7 @@ func TestSSA_PodReconcile_SinglePod(t *testing.T) {
 }
 
 func TestSSA_PodReconcile_TwoPodsMerge(t *testing.T) {
-	cl, cleanup := setupEnvTest(t)
+	cl, cachedCl, cleanup := setupEnvTestWithPodCache(t)
 	defer cleanup()
 
 	nodeName := "test-node"
@@ -298,7 +299,7 @@ func TestSSA_PodReconcile_TwoPodsMerge(t *testing.T) {
 	uid2 := string(pod2Obj.UID)
 
 	// Create a single reconciler that knows about both pods' resources.
-	r := createPodReconcilerWithEnvTest(t, cl,
+	r := createPodReconcilerWithEnvTest(t, cachedCl,
 		[]*podresourcesapi.PodResources{
 			{
 				Name: "pod-1", Namespace: PowerNamespace,
@@ -374,7 +375,7 @@ func TestSSA_PodReconcile_TwoPodsMerge(t *testing.T) {
 // TestSSA_PodReconcile_NoDuplicateContainers verifies that reconciling the same pod
 // multiple times does not create duplicate container entries in PowerNodeState.
 func TestSSA_PodReconcile_NoDuplicateContainers(t *testing.T) {
-	cl, cleanup := setupEnvTest(t)
+	cl, cachedCl, cleanup := setupEnvTestWithPodCache(t)
 	defer cleanup()
 
 	nodeName := "test-node"
@@ -417,7 +418,7 @@ func TestSSA_PodReconcile_NoDuplicateContainers(t *testing.T) {
 	}
 	require.NoError(t, cl.Status().Update(ctx, pod))
 
-	r := createPodReconcilerWithEnvTest(t, cl,
+	r := createPodReconcilerWithEnvTest(t, cachedCl,
 		[]*podresourcesapi.PodResources{{
 			Name: "test-pod", Namespace: PowerNamespace,
 			Containers: []*podresourcesapi.ContainerResources{{

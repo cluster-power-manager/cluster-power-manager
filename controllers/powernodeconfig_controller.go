@@ -18,7 +18,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"os"
 	"reflect"
 	"strings"
 
@@ -49,6 +48,7 @@ type PowerNodeConfigReconciler struct {
 	Log          logr.Logger
 	Scheme       *runtime.Scheme
 	PowerLibrary power.Host
+	NodeName     string
 }
 
 // +kubebuilder:rbac:groups=power.cluster-power-manager.github.io,resources=powernodeconfigs,verbs=get;list;watch,roleName=node-agent-role
@@ -67,9 +67,9 @@ func (r *PowerNodeConfigReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, nil
 	}
 
-	nodeName := os.Getenv("NODE_NAME")
+	nodeName := r.NodeName
 	if nodeName == "" {
-		return ctrl.Result{}, fmt.Errorf("NODE_NAME environment variable not set")
+		return ctrl.Result{}, ErrNodeNameNotSet
 	}
 
 	matches, err := r.getMatchingPowerNodeConfigs(ctx, nodeName)
@@ -376,7 +376,7 @@ func (r *PowerNodeConfigReconciler) updatePowerNodeStatusPools(
 	statusErrors []string,
 	logger *logr.Logger,
 ) error {
-	powerNodeStateName := fmt.Sprintf("%s-power-state", nodeName)
+	powerNodeStateName := PowerNodeStateName(nodeName)
 
 	cpuPools := &powerv1alpha1.CPUPoolsStatus{
 		Shared: &powerv1alpha1.SharedCPUPoolStatus{
@@ -423,7 +423,7 @@ func (r *PowerNodeConfigReconciler) updatePowerNodeStatusPools(
 
 // removePowerNodeStatusPools removes shared and reserved pool status from PowerNodeState.
 func (r *PowerNodeConfigReconciler) removePowerNodeStatusPools(ctx context.Context, nodeName string, logger *logr.Logger) error {
-	powerNodeStateName := fmt.Sprintf("%s-power-state", nodeName)
+	powerNodeStateName := PowerNodeStateName(nodeName)
 
 	patchNodeState := &powerv1alpha1.PowerNodeState{
 		TypeMeta: metav1.TypeMeta{
@@ -480,7 +480,7 @@ func (r *PowerNodeConfigReconciler) enqueuePowerNodeConfigReconcile(ctx context.
 // re-evaluates all matching configs regardless of which key triggered it,
 // one request is sufficient to trigger a full reconciliation.
 func (r *PowerNodeConfigReconciler) enqueueMatchingPowerNodeConfigReconcile(ctx context.Context, _ client.Object) []reconcile.Request {
-	nodeName := os.Getenv("NODE_NAME")
+	nodeName := r.NodeName
 	configs, err := r.getMatchingPowerNodeConfigs(ctx, nodeName)
 	if err != nil {
 		r.Log.Error(err, "failed to get matching PowerNodeConfigs")
@@ -524,7 +524,7 @@ func getExclusiveEntries(pns *powerv1alpha1.PowerNodeState) []powerv1alpha1.Excl
 // SetupWithManager registers the controller and configures watches for
 // PowerNodeConfigs, Node label changes, and PowerNodeState exclusive pool changes.
 func (r *PowerNodeConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	nodeName := os.Getenv("NODE_NAME")
+	nodeName := r.NodeName
 	return ctrl.NewControllerManagedBy(mgr).
 		// PowerNodeConfig CRUD: re-evaluate which config should be active.
 		For(&powerv1alpha1.PowerNodeConfig{}).
@@ -561,7 +561,7 @@ func (r *PowerNodeConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				DeleteFunc:  func(e event.DeleteEvent) bool { return false },
 				GenericFunc: func(e event.GenericEvent) bool { return false },
 				UpdateFunc: func(e event.UpdateEvent) bool {
-					if e.ObjectNew.GetName() != nodeName+"-power-state" {
+					if e.ObjectNew.GetName() != PowerNodeStateName(nodeName) {
 						return false
 					}
 					oldPNS := e.ObjectOld.(*powerv1alpha1.PowerNodeState)

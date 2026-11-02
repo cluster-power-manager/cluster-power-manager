@@ -17,6 +17,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -68,7 +69,7 @@ func createProfileReconcilerObject(objs []runtime.Object) (*PowerProfileReconcil
 		Build()
 
 	// Create a ReconcileNode object with the scheme and fake client.
-	r := &PowerProfileReconciler{cl, ctrl.Log.WithName("testing"), s, nil}
+	r := &PowerProfileReconciler{cl, ctrl.Log.WithName("testing"), s, nil, os.Getenv(NodeNameEnv)}
 
 	return r, nil
 }
