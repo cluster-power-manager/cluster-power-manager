@@ -3,7 +3,7 @@ module github.com/cluster-power-manager/cluster-power-manager
 go 1.26.0
 
 require (
-	github.com/go-logr/logr v1.4.3
+	github.com/go-logr/logr v1.4.4
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/zap v1.27.0
 	golang.org/x/sys v0.37.0
