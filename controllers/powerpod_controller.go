@@ -329,33 +329,47 @@ func (r *PowerPodReconciler) getPowerProfileRequestsFromContainers(ctx context.C
 			logger.V(5).Info("no profile was requested by the container")
 			continue
 		}
+
 		profileAvailable, err := validateProfileAvailabilityOnNode(ctx, r.Client, profileName, pod.Spec.NodeName, r.PowerLibrary, logger)
 		if err != nil {
 			logger.Error(err, "error checking if power profile is available on node")
 			continue
 		}
+
+		// Read the container's assigned CPUs. When a profile disappears while the Pod
+		// is running, these IDs must stay in PowerNodeState so handlePodDeletion can
+		// return them to the shared pool.
+		coreIDs, cpuErr := r.PodResourcesClient.GetContainerCPUs(pod.GetName(), container.Name)
+		cleanCoreList := []uint{}
+		if cpuErr != nil {
+			logger.V(5).Info("error getting CoreIDs.", "ContainerID", containerID)
+			recoverableErrs = append(recoverableErrs, cpuErr)
+		} else {
+			cleanCoreList = getCleanCoreList(coreIDs)
+		}
+
 		if !profileAvailable {
 			errMsg := fmt.Sprintf("power profile '%s' is not available on node %s", profileName, pod.Spec.NodeName)
 			recoverableErrs = append(recoverableErrs, errors.NewServiceUnavailable(errMsg))
 
-			// Add the container with its error so it appears in PowerNodeState.
-			// CPU pool reconciliation will be skipped for containers with errors.
+			containerErrs := []string{errMsg}
+			if cpuErr != nil {
+				containerErrs = append(containerErrs, cpuErr.Error())
+			}
+
+			// Record the container with its CPU IDs and the error.
 			powerContainers = append(powerContainers, powerv1alpha1.PowerContainer{
 				Name:         container.Name,
 				ID:           containerID,
 				PowerProfile: profileName,
-				CPUIDs:       []uint{},
-				Errors:       []string{errMsg},
+				CPUIDs:       cleanCoreList,
+				Errors:       containerErrs,
 			})
 			continue
 		}
-		coreIDs, err := r.PodResourcesClient.GetContainerCPUs(pod.GetName(), container.Name)
-		if err != nil {
-			logger.V(5).Info("error getting CoreIDs.", "ContainerID", containerID)
-			recoverableErrs = append(recoverableErrs, err)
+		if cpuErr != nil {
 			continue
 		}
-		cleanCoreList := getCleanCoreList(coreIDs)
 		logger.V(5).Info("reserving cores to container.", "ContainerID", containerID, "Cores", cleanCoreList)
 
 		// Accounts for case where cores acquired through DRA don't match profile requests.

@@ -724,6 +724,10 @@ container assignments.
 The `PowerNodeState` status is updated via Server-Side Apply (SSA) by the PowerProfile, PowerPod, and PowerNodeConfig
 controllers, each owning their respective fields.
 
+If a container's `PowerProfile` becomes unavailable while its Pod is running (for example, the profile is deleted), the
+container stays listed under `cpuPools.exclusive` with its assigned `cpuIDs` and an `errors` entry, so those CPUs return
+to the shared pool when the Pod ends.
+
 **Example:**
 
 ```yaml

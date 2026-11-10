@@ -1884,7 +1884,7 @@ func TestPowerPod_ValidateProfileNodeSelectorMatching(t *testing.T) {
 			),
 			expectedContainers: []powerv1alpha1.PowerContainer{
 				{Name: "good-container", PowerProfile: "performance", CPUIDs: []uint{10, 11}},
-				{Name: "bad-container", PowerProfile: "gpu-optimized", Errors: []string{
+				{Name: "bad-container", PowerProfile: "gpu-optimized", CPUIDs: []uint{12}, Errors: []string{
 					fmt.Sprintf("power profile 'gpu-optimized' is not available on node %s", testNode),
 				}},
 			},
@@ -1974,6 +1974,148 @@ func TestPowerPod_ValidateProfileNodeSelectorMatching(t *testing.T) {
 			assert.Equal(t, time.Duration(0), result.RequeueAfter)
 		})
 	}
+}
+
+// newPowerContainerPod builds the worker Node, requested container and guaranteed Pod
+// shared by the unavailable-profile tests. The container requests cpus CPUs
+// plus the extended resource of profileName.
+func newPowerContainerPod(testNode, profileName string, cpus int64) (*corev1.Node, corev1.Container, *corev1.Pod) {
+	node := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   testNode,
+			Labels: map[string]string{"node-type": "worker"},
+		},
+	}
+	container := corev1.Container{
+		Name: "test-container",
+		Resources: corev1.ResourceRequirements{
+			Limits: map[corev1.ResourceName]resource.Quantity{
+				corev1.ResourceCPU: *resource.NewQuantity(cpus, resource.DecimalSI),
+				corev1.ResourceName(ResourcePrefix + profileName): *resource.NewQuantity(cpus, resource.DecimalSI),
+			},
+			Requests: map[corev1.ResourceName]resource.Quantity{
+				corev1.ResourceCPU: *resource.NewQuantity(cpus, resource.DecimalSI),
+				corev1.ResourceName(ResourcePrefix + profileName): *resource.NewQuantity(cpus, resource.DecimalSI),
+			},
+		},
+	}
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-pod",
+			Namespace: PowerNamespace,
+			UID:       "test-uid-123",
+		},
+		Spec: corev1.PodSpec{
+			NodeName:   testNode,
+			Containers: []corev1.Container{container},
+		},
+		Status: corev1.PodStatus{
+			Phase:    corev1.PodRunning,
+			QOSClass: corev1.PodQOSGuaranteed,
+			ContainerStatuses: []corev1.ContainerStatus{
+				{Name: "test-container", ContainerID: "docker://abc123"},
+			},
+		},
+	}
+	return node, container, pod
+}
+
+// TestPowerPod_UnavailableProfileKeepsCPUsForRelease guards against the CPU leak that
+// occurred when a PowerProfile disappeared while a Pod was still running: the container
+// must keep its assigned CPU IDs so they return to the shared pool when the Pod ends.
+func TestPowerPod_UnavailableProfileKeepsCPUsForRelease(t *testing.T) {
+	testNode := "TestNode"
+	profileName := "zone-specific"
+	t.Setenv("NODE_NAME", testNode)
+
+	node, _, pod := newPowerContainerPod(testNode, profileName, 2)
+	powerNodeState := &powerv1alpha1.PowerNodeState{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      testNode + "-power-state",
+			Namespace: PowerNamespace,
+		},
+	}
+	// The container already owns CPUs 5 and 6 according to the podresources API.
+	podResources := []*podresourcesapi.PodResources{
+		{
+			Name:      pod.Name,
+			Namespace: pod.Namespace,
+			Containers: []*podresourcesapi.ContainerResources{
+				{Name: "test-container", CpuIds: []int64{5, 6}},
+			},
+		},
+	}
+
+	// Only the node, PowerNodeState and pod exist in the fake client: the absent
+	// PowerProfile CR alone makes the profile unavailable.
+	r, err := createPodReconcilerObject(
+		[]runtime.Object{node, powerNodeState, pod},
+		createFakePodResourcesListerClient(podResources),
+	)
+	require.NoError(t, err)
+
+	mockHost := r.PowerLibrary.(*hostMock)
+	exclusivePool := mockHost.GetExclusivePool(profileName).(*poolMock)
+
+	// Reconcile must fail on the unavailable profile but still record the container's
+	// CPU IDs in PowerNodeState as handlePodDeletion releases CPUs from this status.
+	_, err = r.Reconcile(context.TODO(), reconcile.Request{
+		NamespacedName: client.ObjectKey{Name: pod.Name, Namespace: pod.Namespace},
+	})
+	require.ErrorContains(t, err, fmt.Sprintf("power profile '%s' is not available on node %s", profileName, testNode))
+
+	recordedState := &powerv1alpha1.PowerNodeState{}
+	require.NoError(t, r.Get(context.TODO(), client.ObjectKey{Name: powerNodeState.Name, Namespace: PowerNamespace}, recordedState))
+	require.NotNil(t, recordedState.Status.CPUPools)
+	require.Len(t, recordedState.Status.CPUPools.Exclusive, 1)
+	recordedContainers := recordedState.Status.CPUPools.Exclusive[0].PowerContainers
+	require.Len(t, recordedContainers, 1)
+	// Recorded with the real CPU IDs and the unavailability error, not dropped.
+	assert.ElementsMatch(t, []uint{5, 6}, recordedContainers[0].CPUIDs)
+	assert.NotEmpty(t, recordedContainers[0].Errors)
+
+	// CPU pool reconciliation is skipped for errored containers, so nothing moves into
+	// the unavailable profile's pool.
+	exclusivePool.AssertNotCalled(t, "MoveCPUIDs", mock.Anything)
+
+	// handlePodDeletion releases CPUs from the recorded status, so the IDs return to the
+	// shared pool even though the profile they came from no longer exists.
+	logger := ctrl.Log.WithName("testing")
+	_, err = r.handlePodDeletion(context.TODO(), pod, testNode, &logger)
+	require.NoError(t, err)
+
+	sharedPool := mockHost.GetSharedPool().(*poolMock)
+	sharedPool.AssertCalled(t, "MoveCPUIDs", []uint{5, 6})
+}
+
+// TestPowerPod_UnavailableProfileWithUnreadableCPUs asserts that a container keeps a
+// non-nil, empty CPUIDs list when its CPUs cannot be read and its profile is
+// unavailable, so the serialized PowerNodeState passes CRD array validation.
+func TestPowerPod_UnavailableProfileWithUnreadableCPUs(t *testing.T) {
+	testNode := "TestNode"
+	profileName := "zone-specific"
+	t.Setenv("NODE_NAME", testNode)
+
+	node, container, pod := newPowerContainerPod(testNode, profileName, 2)
+
+	// No podresources entry for the container, so GetContainerCPUs fails.
+	r, err := createPodReconcilerObject(
+		[]runtime.Object{node},
+		createFakePodResourcesListerClient(nil),
+	)
+	require.NoError(t, err)
+
+	logger := ctrl.Log.WithName("testing")
+	powerContainers, errs := r.getPowerProfileRequestsFromContainers(context.TODO(), []corev1.Container{container}, pod, &logger)
+
+	// The CPU read error is recorded before the unavailability error.
+	require.Len(t, errs, 2)
+	assert.ErrorContains(t, errs[1], fmt.Sprintf("power profile '%s' is not available on node %s", profileName, testNode))
+
+	require.Len(t, powerContainers, 1)
+	assert.NotNil(t, powerContainers[0].CPUIDs)
+	assert.Empty(t, powerContainers[0].CPUIDs)
+	require.Len(t, powerContainers[0].Errors, 2)
 }
 
 func TestPowerReleventPodPredicate(t *testing.T) {
