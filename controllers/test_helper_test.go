@@ -24,6 +24,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
+// Names of the PowerProfiles used by the PowerPod tests. The mock hosts register an
+// exclusive pool under each of the first two names.
+const (
+	profilePerformance        = "performance"
+	profileBalancePerformance = "balance-performance"
+	profileBalancePower       = "balance-power"
+)
+
 type hostMock struct {
 	mock.Mock
 	power.Host

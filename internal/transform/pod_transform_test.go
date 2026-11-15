@@ -31,6 +31,7 @@ import (
 // to keep the former and drop the latter.
 func largePod() *corev1.Pod {
 	now := metav1.NewTime(time.Now())
+	restartPolicyAlways := corev1.ContainerRestartPolicyAlways
 	reqs := corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
 			corev1.ResourceCPU: resource.MustParse("2"),
@@ -61,7 +62,7 @@ func largePod() *corev1.Pod {
 			ServiceAccountName: "dropped-sa",
 			Tolerations:        []corev1.Toleration{{Key: "dropped"}},
 			InitContainers: []corev1.Container{
-				{Name: "init-0", Image: "dropped", Resources: reqs, Env: []corev1.EnvVar{{Name: "DROP", Value: "x"}}},
+				{Name: "init-0", Image: "dropped", Resources: reqs, RestartPolicy: &restartPolicyAlways, Env: []corev1.EnvVar{{Name: "DROP", Value: "x"}}},
 			},
 			Containers: []corev1.Container{
 				{
@@ -111,6 +112,8 @@ func TestTransformPodForAgent(t *testing.T) {
 	require.Len(t, transformed.Spec.InitContainers, 1)
 	assert.Equal(t, "main", transformed.Spec.Containers[0].Name)
 	assert.Equal(t, "init-0", transformed.Spec.InitContainers[0].Name)
+	// The restart policy distinguishes sidecar init containers from regular ones.
+	assert.Equal(t, corev1.ContainerRestartPolicyAlways, *transformed.Spec.InitContainers[0].RestartPolicy)
 	// Resources are read whole: requests, limits and claims.
 	assert.Equal(t, largePod().Spec.Containers[0].Resources, transformed.Spec.Containers[0].Resources)
 

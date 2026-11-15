@@ -125,7 +125,11 @@ func (r *PowerPodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	// Get the power containers requested by containers in the pod.
-	powerContainers, recoveryErrs := r.getPowerProfileRequestsFromContainers(ctx, admissibleContainers, pod, &logger)
+	powerContainers, recoverableErrs, err := r.getPowerProfileRequestsFromContainers(ctx, admissibleContainers, pod, &logger)
+	if err != nil {
+		logger.Error(err, "error getting power profile requests from containers")
+		return ctrl.Result{}, err
+	}
 	logger.V(5).Info("retrieved power profiles and containers from pod requests")
 
 	// dpdkContainerAssigned tracks whether a DPDK container in this pod has already
@@ -146,7 +150,7 @@ func (r *PowerPodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			err := fmt.Errorf("exclusive pool for profile %s not found", container.PowerProfile)
 			logger.Error(err, "failed to get exclusive pool", "container", container.Name)
 			container.Errors = append(container.Errors, err.Error())
-			recoveryErrs = append(recoveryErrs, err)
+			recoverableErrs = append(recoverableErrs, err)
 			continue
 		}
 
@@ -167,7 +171,7 @@ func (r *PowerPodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			if err := exclusivePool.MoveCPUIDs(coresToAdd); err != nil {
 				logger.Error(err, "failed to move CPUs to exclusive pool", "profile", container.PowerProfile, "container", container.Name)
 				container.Errors = append(container.Errors, err.Error())
-				recoveryErrs = append(recoveryErrs, err)
+				recoverableErrs = append(recoverableErrs, err)
 				continue
 			}
 		}
@@ -182,7 +186,7 @@ func (r *PowerPodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 				// Unlikely: profile was validated moments ago, but handle deletion between checks.
 				errMsg := fmt.Sprintf("PowerProfile '%s' not found", container.PowerProfile)
 				container.Errors = append(container.Errors, errMsg)
-				recoveryErrs = append(recoveryErrs, errors.NewServiceUnavailable(errMsg))
+				recoverableErrs = append(recoverableErrs, errors.NewServiceUnavailable(errMsg))
 				continue
 			}
 			return ctrl.Result{}, fmt.Errorf("failed to get PowerProfile: %w", err)
@@ -240,7 +244,7 @@ func (r *PowerPodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
-	wrappedErrs := e.Join(recoveryErrs...)
+	wrappedErrs := e.Join(recoverableErrs...)
 	if wrappedErrs != nil {
 		logger.Error(wrappedErrs, "recoverable errors")
 		return ctrl.Result{Requeue: false}, fmt.Errorf("recoverable errors encountered: %w", wrappedErrs)
@@ -302,18 +306,20 @@ func (r *PowerPodReconciler) handlePodDeletion(ctx context.Context, pod *corev1.
 	return ctrl.Result{}, nil
 }
 
-func (r *PowerPodReconciler) getPowerProfileRequestsFromContainers(ctx context.Context, containers []corev1.Container, pod *corev1.Pod, logger *logr.Logger) ([]powerv1alpha1.PowerContainer, []error) {
+// getPowerProfileRequestsFromContainers returns the containers to record in the Pod's PowerNodeState entry, which each
+// Reconcile replaces. Reconcile returns recoverableErrs after it has processed the other containers; abortErr is
+// returned immediately, before any CPU is moved or the entry is written, so the last entry is kept.
+func (r *PowerPodReconciler) getPowerProfileRequestsFromContainers(ctx context.Context, containers []corev1.Container, pod *corev1.Pod, logger *logr.Logger) (powerContainers []powerv1alpha1.PowerContainer, recoverableErrs []error, abortErr error) {
 	logger.V(5).Info("get the power profiles from the containers")
-	var recoverableErrs []error
-	powerContainers := make([]powerv1alpha1.PowerContainer, 0)
+	powerContainers = make([]powerv1alpha1.PowerContainer, 0)
 	for _, container := range containers {
 		logger.V(5).Info("retrieving the requested power profile from the container spec")
 		containerID := strings.TrimPrefix(getContainerID(pod, container.Name), "docker://")
 
 		profileName, requestNum, err := getContainerProfileFromRequests(container, logger)
 		if err != nil {
-			// Pod spec validation errors are not recoverable (pod spec is immutable).
-			// Store the error in PowerNodeState for visibility but don't trigger requeue.
+			// Permanent (the pod spec is immutable): record the error on the container. It is not added to recoverableErrs, so
+			// the pod is not retried.
 			logger.Error(err, "pod spec validation error", "container", container.Name)
 			powerContainers = append(powerContainers, powerv1alpha1.PowerContainer{
 				Name:   container.Name,
@@ -330,49 +336,53 @@ func (r *PowerPodReconciler) getPowerProfileRequestsFromContainers(ctx context.C
 			continue
 		}
 
-		profileAvailable, err := validateProfileAvailabilityOnNode(ctx, r.Client, profileName, pod.Spec.NodeName, r.PowerLibrary, logger)
-		if err != nil {
-			logger.Error(err, "error checking if power profile is available on node")
+		// The kubelet does not report CPUs for init containers that are not restartable. Permanent: record the error on the
+		// container, not in recoverableErrs, so the pod is not retried and its other containers are not blocked.
+		if isRegularInitContainer(pod, container.Name) {
+			errMsg := fmt.Sprintf("power profile '%s' cannot be applied to init container '%s': the kubelet does not report CPUs for init containers that are not restartable (restartPolicy: Always)", profileName, container.Name)
+			logger.Info("power profile requested by a regular init container", "container", container.Name, "profile", profileName)
+			powerContainers = append(powerContainers, powerv1alpha1.PowerContainer{
+				Name:         container.Name,
+				ID:           containerID,
+				PowerProfile: profileName,
+				CPUIDs:       []uint{},
+				Errors:       []string{errMsg},
+			})
 			continue
 		}
 
-		// Read the container's assigned CPUs. When a profile disappears while the Pod
-		// is running, these IDs must stay in PowerNodeState so handlePodDeletion can
-		// return them to the shared pool.
-		coreIDs, cpuErr := r.PodResourcesClient.GetContainerCPUs(pod.GetName(), container.Name)
-		cleanCoreList := []uint{}
-		if cpuErr != nil {
-			logger.V(5).Info("error getting CoreIDs.", "ContainerID", containerID)
-			recoverableErrs = append(recoverableErrs, cpuErr)
-		} else {
-			cleanCoreList = getCleanCoreList(coreIDs)
+		profileAvailable, err := validateProfileAvailabilityOnNode(ctx, r.Client, profileName, pod.Spec.NodeName, r.PowerLibrary, logger)
+		if err != nil {
+			// Abort rather than drop the container: the entry is replaced, so its recorded CPU IDs would be lost.
+			return nil, nil, fmt.Errorf("checking availability of power profile %q: %w", profileName, err)
 		}
+
+		// Abort for the same reason.
+		coreIDs, cpuErr := r.PodResourcesClient.GetContainerCPUs(pod.GetName(), container.Name)
+		if cpuErr != nil {
+			return nil, nil, fmt.Errorf("reading CPUs of container %q: %w", container.Name, cpuErr)
+		}
+		cleanCoreList := getCleanCoreList(coreIDs)
 
 		if !profileAvailable {
 			errMsg := fmt.Sprintf("power profile '%s' is not available on node %s", profileName, pod.Spec.NodeName)
 			recoverableErrs = append(recoverableErrs, errors.NewServiceUnavailable(errMsg))
 
-			containerErrs := []string{errMsg}
-			if cpuErr != nil {
-				containerErrs = append(containerErrs, cpuErr.Error())
-			}
-
-			// Record the container with its CPU IDs and the error.
+			// Keep its CPU IDs in the entry so deleting the pod still releases them. The error is returned after the other
+			// containers are processed.
 			powerContainers = append(powerContainers, powerv1alpha1.PowerContainer{
 				Name:         container.Name,
 				ID:           containerID,
 				PowerProfile: profileName,
 				CPUIDs:       cleanCoreList,
-				Errors:       containerErrs,
+				Errors:       []string{errMsg},
 			})
-			continue
-		}
-		if cpuErr != nil {
 			continue
 		}
 		logger.V(5).Info("reserving cores to container.", "ContainerID", containerID, "Cores", cleanCoreList)
 
-		// Accounts for case where cores acquired through DRA don't match profile requests.
+		// Cores acquired through DRA may not match the profile requests. The container is left out of the entry, so, unlike
+		// the cases above, CPUs already recorded for it would be dropped.
 		if len(cleanCoreList) != requestNum {
 			recoverableErrs = append(recoverableErrs, fmt.Errorf("assigned cores did not match requested profiles. cores:%d, profiles %d", len(cleanCoreList), requestNum))
 			continue
@@ -386,7 +396,7 @@ func (r *PowerPodReconciler) getPowerProfileRequestsFromContainers(ctx context.C
 		})
 	}
 
-	return powerContainers, recoverableErrs
+	return powerContainers, recoverableErrs, nil
 }
 
 func getContainerProfileFromRequests(container corev1.Container, logger *logr.Logger) (string, int, error) {
@@ -444,6 +454,19 @@ func allPodContainers(pod *corev1.Pod) []corev1.Container {
 	containers = append(containers, pod.Spec.InitContainers...)
 	containers = append(containers, pod.Spec.Containers...)
 	return containers
+}
+
+// isRegularInitContainer reports whether containerName refers to an init container that
+// is not restartable. The kubelet PodResources API does not report CPUs for such
+// containers; only app containers and sidecar init containers (restartPolicy: Always) are
+// reported.
+func isRegularInitContainer(pod *corev1.Pod, containerName string) bool {
+	for _, c := range pod.Spec.InitContainers {
+		if c.Name == containerName {
+			return c.RestartPolicy == nil || *c.RestartPolicy != corev1.ContainerRestartPolicyAlways
+		}
+	}
+	return false
 }
 
 func getAdmissibleContainers(pod *corev1.Pod, resourceClient podresourcesclient.PodResourcesClient, logger *logr.Logger) []corev1.Container {

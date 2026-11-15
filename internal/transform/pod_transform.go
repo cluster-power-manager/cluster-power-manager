@@ -44,6 +44,7 @@ var TransformPodForManagerCache = podCacheTransform(TransformPodForManager)
 //   - spec.{containers,initContainers}[].resources (requests, limits and claims)
 //   - status.qosClass
 //   - status.{containerStatuses,initContainerStatuses}[].{name,containerID}
+//   - spec.{containers,initContainers}[].restartPolicy (isRegularInitContainer)
 //
 // IMPORTANT: if the PowerPod path starts reading a new pod field, it must be
 // added here or it will silently read as a zero value. TestTransformPodForAgent guards
@@ -114,9 +115,10 @@ func transformContainerResources(in []corev1.Container) []corev1.Container {
 	return out
 }
 
-// transformContainers keeps only the container name and resource requirements,
-// which are all the PowerPod path inspects per container. Empty input becomes
-// nil so repeated transforms stay equal.
+// transformContainers keeps only the fields the PowerPod path inspects per
+// container: the name, the resource requirements and the restart policy (used to
+// tell sidecar init containers from regular ones). Empty input becomes nil so
+// repeated transforms stay equal.
 func transformContainers(in []corev1.Container) []corev1.Container {
 	if len(in) == 0 {
 		return nil
@@ -124,8 +126,9 @@ func transformContainers(in []corev1.Container) []corev1.Container {
 	out := make([]corev1.Container, len(in))
 	for i := range in {
 		out[i] = corev1.Container{
-			Name:      in[i].Name,
-			Resources: in[i].Resources,
+			Name:          in[i].Name,
+			Resources:     in[i].Resources,
+			RestartPolicy: in[i].RestartPolicy,
 		}
 	}
 	return out

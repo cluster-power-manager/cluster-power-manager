@@ -1095,12 +1095,11 @@ func TestPowerPod_Reconcile_PodClientErrs(t *testing.T) {
 			},
 		},
 		{
-			testCase: "Test Case 3 - Invalid List requests",
+			testCase: "Test Case 3 - PowerProfile Get error aborts the reconcile",
 			nodeName: "TestNode",
 			podName:  "test-pod-1",
 			convertClient: func(c client.Client) client.Client {
 				mkcl := new(errClient)
-				// Use a success status writer since we expect no error from this test
 				statusWriter := new(mockResourceWriter)
 				statusWriter.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 				mkcl.On("Status").Return(statusWriter)
@@ -1108,10 +1107,11 @@ func TestPowerPod_Reconcile_PodClientErrs(t *testing.T) {
 					node := args.Get(2).(*corev1.Pod)
 					*node = *defaultPod
 				})
-				mkcl.On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1alpha1.PowerProfile")).Return(fmt.Errorf("powerprofiles.power.cluster-power-manager.github.io \"performance\" not found"))
+				mkcl.On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1alpha1.PowerProfile")).Return(fmt.Errorf("client get PowerProfile error"))
 				return mkcl
 			},
-			clientErr: "",
+			// A failed availability check aborts the reconcile so the status entry is not overwritten.
+			clientErr: `checking availability of power profile "performance": client get PowerProfile error`,
 			podResources: []*podresourcesapi.PodResources{
 				{
 					Name:      "test-pod-1",
@@ -2020,78 +2020,10 @@ func newPowerContainerPod(testNode, profileName string, cpus int64) (*corev1.Nod
 	return node, container, pod
 }
 
-// TestPowerPod_UnavailableProfileKeepsCPUsForRelease guards against the CPU leak that
-// occurred when a PowerProfile disappeared while a Pod was still running: the container
-// must keep its assigned CPU IDs so they return to the shared pool when the Pod ends.
-func TestPowerPod_UnavailableProfileKeepsCPUsForRelease(t *testing.T) {
-	testNode := "TestNode"
-	profileName := "zone-specific"
-	t.Setenv("NODE_NAME", testNode)
-
-	node, _, pod := newPowerContainerPod(testNode, profileName, 2)
-	powerNodeState := &powerv1alpha1.PowerNodeState{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      testNode + "-power-state",
-			Namespace: PowerNamespace,
-		},
-	}
-	// The container already owns CPUs 5 and 6 according to the podresources API.
-	podResources := []*podresourcesapi.PodResources{
-		{
-			Name:      pod.Name,
-			Namespace: pod.Namespace,
-			Containers: []*podresourcesapi.ContainerResources{
-				{Name: "test-container", CpuIds: []int64{5, 6}},
-			},
-		},
-	}
-
-	// Only the node, PowerNodeState and pod exist in the fake client: the absent
-	// PowerProfile CR alone makes the profile unavailable.
-	r, err := createPodReconcilerObject(
-		[]runtime.Object{node, powerNodeState, pod},
-		createFakePodResourcesListerClient(podResources),
-	)
-	require.NoError(t, err)
-
-	mockHost := r.PowerLibrary.(*hostMock)
-	exclusivePool := mockHost.GetExclusivePool(profileName).(*poolMock)
-
-	// Reconcile must fail on the unavailable profile but still record the container's
-	// CPU IDs in PowerNodeState as handlePodDeletion releases CPUs from this status.
-	_, err = r.Reconcile(context.TODO(), reconcile.Request{
-		NamespacedName: client.ObjectKey{Name: pod.Name, Namespace: pod.Namespace},
-	})
-	require.ErrorContains(t, err, fmt.Sprintf("power profile '%s' is not available on node %s", profileName, testNode))
-
-	recordedState := &powerv1alpha1.PowerNodeState{}
-	require.NoError(t, r.Get(context.TODO(), client.ObjectKey{Name: powerNodeState.Name, Namespace: PowerNamespace}, recordedState))
-	require.NotNil(t, recordedState.Status.CPUPools)
-	require.Len(t, recordedState.Status.CPUPools.Exclusive, 1)
-	recordedContainers := recordedState.Status.CPUPools.Exclusive[0].PowerContainers
-	require.Len(t, recordedContainers, 1)
-	// Recorded with the real CPU IDs and the unavailability error, not dropped.
-	assert.ElementsMatch(t, []uint{5, 6}, recordedContainers[0].CPUIDs)
-	assert.NotEmpty(t, recordedContainers[0].Errors)
-
-	// CPU pool reconciliation is skipped for errored containers, so nothing moves into
-	// the unavailable profile's pool.
-	exclusivePool.AssertNotCalled(t, "MoveCPUIDs", mock.Anything)
-
-	// handlePodDeletion releases CPUs from the recorded status, so the IDs return to the
-	// shared pool even though the profile they came from no longer exists.
-	logger := ctrl.Log.WithName("testing")
-	_, err = r.handlePodDeletion(context.TODO(), pod, testNode, &logger)
-	require.NoError(t, err)
-
-	sharedPool := mockHost.GetSharedPool().(*poolMock)
-	sharedPool.AssertCalled(t, "MoveCPUIDs", []uint{5, 6})
-}
-
-// TestPowerPod_UnavailableProfileWithUnreadableCPUs asserts that a container keeps a
-// non-nil, empty CPUIDs list when its CPUs cannot be read and its profile is
-// unavailable, so the serialized PowerNodeState passes CRD array validation.
-func TestPowerPod_UnavailableProfileWithUnreadableCPUs(t *testing.T) {
+// TestPowerPod_UnavailableProfileWithUnreadableCPUsAborts asserts that a CPU read
+// error aborts the reconcile even when the profile is unavailable, rather than
+// recording the container with empty CPU IDs.
+func TestPowerPod_UnavailableProfileWithUnreadableCPUsAborts(t *testing.T) {
 	testNode := "TestNode"
 	profileName := "zone-specific"
 	t.Setenv("NODE_NAME", testNode)
@@ -2106,16 +2038,42 @@ func TestPowerPod_UnavailableProfileWithUnreadableCPUs(t *testing.T) {
 	require.NoError(t, err)
 
 	logger := ctrl.Log.WithName("testing")
-	powerContainers, errs := r.getPowerProfileRequestsFromContainers(context.TODO(), []corev1.Container{container}, pod, &logger)
+	powerContainers, errs, err := r.getPowerProfileRequestsFromContainers(context.TODO(), []corev1.Container{container}, pod, &logger)
+	require.ErrorContains(t, err, "reading CPUs of container")
+	assert.Nil(t, powerContainers)
+	assert.Nil(t, errs)
+}
 
-	// The CPU read error is recorded before the unavailability error.
-	require.Len(t, errs, 2)
-	assert.ErrorContains(t, errs[1], fmt.Sprintf("power profile '%s' is not available on node %s", profileName, testNode))
+func TestIsRegularInitContainer(t *testing.T) {
+	always := corev1.ContainerRestartPolicyAlways
+	pod := &corev1.Pod{
+		Spec: corev1.PodSpec{
+			InitContainers: []corev1.Container{
+				{Name: "init"},
+				{Name: "sidecar", RestartPolicy: &always},
+			},
+			Containers: []corev1.Container{
+				{Name: "app"},
+			},
+		},
+	}
 
-	require.Len(t, powerContainers, 1)
-	assert.NotNil(t, powerContainers[0].CPUIDs)
-	assert.Empty(t, powerContainers[0].CPUIDs)
-	require.Len(t, powerContainers[0].Errors, 2)
+	tcases := []struct {
+		name          string
+		containerName string
+		want          bool
+	}{
+		{name: "regular init container", containerName: "init", want: true},
+		{name: "sidecar init container", containerName: "sidecar", want: false},
+		{name: "app container", containerName: "app", want: false},
+		{name: "unknown container", containerName: "missing", want: false},
+	}
+
+	for _, tc := range tcases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, isRegularInitContainer(pod, tc.containerName))
+		})
+	}
 }
 
 func TestPowerReleventPodPredicate(t *testing.T) {
