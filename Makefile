@@ -521,8 +521,8 @@ race: tidy
 
 clean:
 	go clean --cache
-	rm -r build/bin/manager
-	rm -r build/bin/nodeagent
+	rm -f build/bin/manager
+	rm -f build/bin/nodeagent
 
 gofmt:
 	gofmt -w .
