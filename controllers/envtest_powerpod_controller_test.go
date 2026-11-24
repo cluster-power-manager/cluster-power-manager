@@ -109,8 +109,8 @@ func createPodReconcilePrereqs(t *testing.T, cl client.Client, ctx context.Conte
 }
 
 // createPerformancePowerPod creates a running guaranteed Pod that requests the performance
-// PowerProfile in its single container.
-func createPerformancePowerPod(t *testing.T, cl client.Client, ctx context.Context, nodeName string) *corev1.Pod {
+// PowerProfile in its single container, and waits until cachedCl observes its status.
+func createPerformancePowerPod(t *testing.T, cl, cachedCl client.Client, ctx context.Context, nodeName string) *corev1.Pod {
 	t.Helper()
 
 	pod := &corev1.Pod{
@@ -144,8 +144,27 @@ func createPerformancePowerPod(t *testing.T, cl client.Client, ctx context.Conte
 			Name: "perf-container", ContainerID: "cri-o://container-abc",
 		}},
 	}
-	require.NoError(t, cl.Status().Update(ctx, pod))
+	updatePodStatusAndWaitForCache(t, cl, cachedCl, ctx, pod)
 	return pod
+}
+
+// updatePodStatusAndWaitForCache writes the Pod's status with the direct client and
+// waits until cachedCl (the reconciler's view) returns that same ResourceVersion.
+// Without the wait, a Reconcile right after setup can read the Pod from a cache
+// that has not yet seen the status write, and fail with "the pod is not in the
+// running phase".
+func updatePodStatusAndWaitForCache(t *testing.T, cl, cachedCl client.Client, ctx context.Context, pod *corev1.Pod) {
+	t.Helper()
+
+	require.NoError(t, cl.Status().Update(ctx, pod))
+	key := client.ObjectKeyFromObject(pod)
+	require.Eventually(t, func() bool {
+		cached := &corev1.Pod{}
+		if err := cachedCl.Get(ctx, key, cached); err != nil {
+			return false
+		}
+		return cached.ResourceVersion == pod.ResourceVersion
+	}, 10*time.Second, 50*time.Millisecond, "pod cache did not observe status update for %s", key)
 }
 
 // singleExclusiveContainer returns the only container recorded in the
@@ -240,7 +259,7 @@ func TestSSA_PodReconcile_SinglePod(t *testing.T) {
 			Name: "perf-container", ContainerID: "cri-o://container-abc",
 		}},
 	}
-	require.NoError(t, cl.Status().Update(ctx, pod))
+	updatePodStatusAndWaitForCache(t, cl, cachedCl, ctx, pod)
 
 	r := createPodReconcilerWithEnvTest(t, cachedCl,
 		[]*podresourcesapi.PodResources{{
@@ -300,7 +319,7 @@ func TestSSA_PodReconcile_ProfileDeletedWhilePodRunning(t *testing.T) {
 	createPodReconcilePrereqs(t, cl, ctx, nodeName, profilePerformance)
 
 	// Create Power Pod.
-	pod := createPerformancePowerPod(t, cl, ctx, nodeName)
+	pod := createPerformancePowerPod(t, cl, cachedCl, ctx, nodeName)
 
 	r := createPodReconcilerWithEnvTest(t, cachedCl,
 		[]*podresourcesapi.PodResources{{
@@ -388,7 +407,7 @@ func TestSSA_PodReconcile_AvailabilityErrorKeepsRecordedCPUs(t *testing.T) {
 	ctx := context.TODO()
 
 	createPodReconcilePrereqs(t, cl, ctx, nodeName, profilePerformance)
-	createPerformancePowerPod(t, cl, ctx, nodeName)
+	createPerformancePowerPod(t, cl, cachedCl, ctx, nodeName)
 
 	r := createPodReconcilerWithEnvTest(t, cachedCl,
 		[]*podresourcesapi.PodResources{{
@@ -458,7 +477,7 @@ func TestSSA_PodReconcile_CPUReadErrorKeepsRecordedCPUs(t *testing.T) {
 			ctx := context.TODO()
 
 			createPodReconcilePrereqs(t, cl, ctx, nodeName, profilePerformance)
-			createPerformancePowerPod(t, cl, ctx, nodeName)
+			createPerformancePowerPod(t, cl, cachedCl, ctx, nodeName)
 
 			r := createPodReconcilerWithEnvTest(t, cachedCl,
 				[]*podresourcesapi.PodResources{{
@@ -569,7 +588,7 @@ func TestSSA_PodReconcile_RegularInitContainerRecordedAsError(t *testing.T) {
 			{Name: "app", ContainerID: "cri-o://app"},
 		},
 	}
-	require.NoError(t, cl.Status().Update(ctx, pod))
+	updatePodStatusAndWaitForCache(t, cl, cachedCl, ctx, pod)
 
 	// The kubelet reports CPUs for the sidecar and the app container only.
 	r := createPodReconcilerWithEnvTest(t, cachedCl,
@@ -698,7 +717,7 @@ func TestSSA_PodReconcile_TwoPodsMerge(t *testing.T) {
 			{Name: "c2", ContainerID: "cri-o://pod-1-c2"},
 		},
 	}
-	require.NoError(t, cl.Status().Update(ctx, pod1Obj))
+	updatePodStatusAndWaitForCache(t, cl, cachedCl, ctx, pod1Obj)
 	require.NoError(t, cl.Get(ctx, client.ObjectKey{Name: "pod-1", Namespace: PowerNamespace}, pod1Obj))
 
 	// --- Create pod-2 with a single container. ---
@@ -731,7 +750,7 @@ func TestSSA_PodReconcile_TwoPodsMerge(t *testing.T) {
 			{Name: "c3", ContainerID: "cri-o://pod-2-c3"},
 		},
 	}
-	require.NoError(t, cl.Status().Update(ctx, pod2Obj))
+	updatePodStatusAndWaitForCache(t, cl, cachedCl, ctx, pod2Obj)
 	require.NoError(t, cl.Get(ctx, client.ObjectKey{Name: "pod-2", Namespace: PowerNamespace}, pod2Obj))
 
 	// Get the UIDs of the pods.
@@ -856,7 +875,7 @@ func TestSSA_PodReconcile_NoDuplicateContainers(t *testing.T) {
 			Name: "perf-container", ContainerID: "cri-o://container-abc",
 		}},
 	}
-	require.NoError(t, cl.Status().Update(ctx, pod))
+	updatePodStatusAndWaitForCache(t, cl, cachedCl, ctx, pod)
 
 	r := createPodReconcilerWithEnvTest(t, cachedCl,
 		[]*podresourcesapi.PodResources{{
